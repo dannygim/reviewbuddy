@@ -31,12 +31,12 @@
 
 ## 完了条件
 
-- [ ] `bun run verify` が通り、CI (macOS / Linux) も通る
-- [ ] 調査の 20 行のサンプルで、期待どおりの `data-src-start` / `data-src-end` が付く (単体テスト)
-- [ ] Preview 表示で、見出し・表・タスクリスト・ハイライトされたコード・Mermaid の図が出る。`<script>` や `onerror` を含む Markdown を開いても実行されない (E2E)
-- [ ] Source タブで行番号付きのソースが出る (E2E)
-- [ ] ルート内の Markdown への相対リンクをクリックすると、そのファイルが開く (E2E)
-- [ ] ビルドしたバイナリで、Mermaid を含まないファイルを開いても Mermaid のチャンクを読み込まず、含むファイルを開くと読み込む
+- [x] `bun run verify` が通り、CI (macOS / Linux) も通る
+- [x] 調査の 20 行のサンプルで、期待どおりの `data-src-start` / `data-src-end` が付く (単体テスト)
+- [x] Preview 表示で、見出し・表・タスクリスト・ハイライトされたコード・Mermaid の図が出る。`<script>` や `onerror` を含む Markdown を開いても実行されない (E2E)
+- [x] Source タブで行番号付きのソースが出る (E2E)
+- [x] ルート内の Markdown への相対リンクをクリックすると、そのファイルが開く (E2E)
+- [x] ビルドしたバイナリで、Mermaid を含まないファイルを開いても Mermaid のチャンクを読み込まず、含むファイルを開くと読み込む
 
 ***
 
