@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "format": "bun fmt src",
-    "verify": "bun check && bun fmt --check src && bun test"
+    "dev": "bun --hot src/cli.ts",
+    "build": "bun build src/cli.ts --compile --minify --sourcemap --bytecode --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile dist/akapen",
+    "format": "bun fmt src test",
+    "verify": "bun check && bun fmt --check src test && bun test"
   },
   "dependencies": {
     "react": "19.3.1",
