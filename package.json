@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/cli.ts",
-    "build": "bun build src/cli.ts --compile --minify --sourcemap --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile dist/akapen",
+    "build": "bun build src/cli.ts --compile --splitting --minify --sourcemap --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile dist/akapen",
     "format": "bun fmt src test",
     "verify": "bun check && bun fmt --check src test && bun test"
   },

@@ -89,3 +89,22 @@
 | R2 | Mermaid 12 の既定値の変更で図の見た目が変わる | `securityLevel` とテーマだけを指定し、他は既定に任せる。見た目の問題が出たら設定を足す |
 | R3 | DOMPurify が Shiki の `style` 属性や `data-*` を落とす | E2E でハイライトの色と `data-src-*` が残ることを確かめる |
 | R4 | キャッシュした `previewHtml` のリンクが、ファイルの追加・削除を反映しない | ファイルが変わるまでは古いリンクのまま。M6 のファイル監視でキャッシュを捨てる |
+
+***
+
+## 計測結果
+
+2026-10-23、macOS (Apple silicon)、Bun 1.4.4 でビルドしたバイナリを `Bun.WebView` で開いて測った。
+
+| 項目 | 結果 |
+|------|------|
+| 初回に読み込む JS (Mermaid を含まない Markdown を開いたとき) | 458 KB (`--splitting` なしでは 5.7 MB) |
+| Mermaid を含む Markdown を開いた後の JS の合計 | 2,631 KB |
+| バイナリのサイズ | 105.7 MB (`--splitting` なしでは 101.0 MB) |
+
+- `--splitting` を付けると、Shiki の `bundledLanguagesInfo` が持つ全言語の動的 import までチャンクとして埋め込まれ、112.5 MB になった。使う言語だけを静的なパスで import する形 (`LANGUAGE_MODULES`) に変えて 105.7 MB にした
+- 残りの 4.7 MB の増加は、分割で増えたチャンクのぶん。初回の読み込みが 5.7 MB から 458 KB に減るため受け入れる
+
+## 計画からの変更
+
+- `html_block` には `data-src-*` を付けず、`div` でも包まない。`<details>` のように Markdown をはさんで複数のブロックにまたがる生の HTML の構造を壊さないため ([Markdown_Preview.md](../design/Markdown_Preview.md) も更新した)

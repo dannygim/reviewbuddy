@@ -60,6 +60,8 @@
 - **既定では、実行時のカレントディレクトリの `.env` と `bunfig.toml` を読み込む**。`--no-compile-autoload-dotenv` / `--no-compile-autoload-bunfig` で止められる **確認済** (実行。`.env` を置いたディレクトリで、フラグなしのバイナリは値を読み、フラグありのバイナリは読まなかった)
 - 本番向けに推奨されているフラグ: `--minify` / `--sourcemap` (スタックトレースが元のソースを指す) / `--bytecode` (起動の高速化) **確認済**。M0 のバイナリでも、エラー時のスタックトレースが `src/server.ts:28:14` のように元のソースを指した **確認済** (実行)
 - `--sourcemap` を付けると、出力先に `.map` ファイルも書き出される **確認済** (実行)
+- **HTML import のフロントエンドは、既定では動的 import を別のチャンクに分けない** (開発モードでも `--compile` でも 1 ファイルになる)。`--compile --splitting` を付けると、フロントエンドもサーバーも分割され、分割したチャンクを実行時に読み込む **確認済** (実行。M2 で Mermaid を含む 5.7MB の初回の JS が 458KB になった)
+- `--splitting` を付けると、サーバー側の動的 import (`import("...")`) の先もすべてチャンクとして埋め込まれる。Shiki の `bundledLanguagesInfo` のように全言語の動的 import を持つものを使うと、使わない言語までバイナリに入る (101MB → 112.5MB)。使う言語だけを静的なパスで import すれば避けられる (105.7MB) **確認済** (実行)
 - `--bytecode` の出力は、`--format` を省略すると CommonJS になる。ESM のバイトコードは `--compile` と `--format=esm` の両方が必要。バイトコードは Bun のバージョン間で互換性がない **確認済** (`@types/bun` 1.4.4 同梱のドキュメント)
 - バイナリのサイズ: HTML import + Shiki + WebSocket の最小サーバーで約 114MB (Linux x64、Shiki の全言語・テーマを含む)。M0 の時点 (React のみ、Shiki なし) では約 92MB (macOS arm64) **確認済** (実行)
 - サイズ削減: `shiki/core` + Oniguruma エンジン + 使う言語 (約 40) だけを読み込むと、M1 のバイナリは `--minify --sourcemap` で 101MB (macOS arm64)。WASM も単一バイナリの中で動く **確認済** (実行)

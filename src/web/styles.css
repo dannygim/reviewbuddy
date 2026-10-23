@@ -186,6 +186,10 @@ body {
   line-height: 1.25;
 }
 
+.markdown > :first-child {
+  margin-top: 0;
+}
+
 .markdown :is(h1, h2) {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);
