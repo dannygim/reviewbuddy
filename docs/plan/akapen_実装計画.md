@@ -5,7 +5,7 @@
 - 作成日: 2026-10-23
 - 対象: v0.1.0 (v1 の初回リリース)
 - フェーズごとの詳細計画 (TDD の手順まで落としたもの) は、着手時に `docs/plan/M<N>_<名前>_詳細計画.md` として 1 本ずつ書く。作成済み: [M0_骨組み_詳細計画.md](./M0_骨組み_詳細計画.md)
-- 要件定義と技術調査は現在リポジトリ外のメモにある。D1 / D2 (後述) で `docs/research/` と `docs/design/` に移し、以後はそちらを正本とする
+- 要件と設計の正本は `docs/design/` ([要件.md](../design/要件.md) / [全体設計.md](../design/全体設計.md) から辿る)、技術調査の正本は `docs/research/` (2026-10-23 の D1 / D2 で移した)
 
 ***
 
@@ -26,7 +26,7 @@ v1 で達成すること:
 
 ### 機能要件とフェーズの対応
 
-要件 ID は要件定義メモの番号をそのまま使う (D2 で `docs/design/` に移すときも番号を維持する)。
+要件 ID は [要件.md](../design/要件.md) の番号。
 
 | ID | 要件 | フェーズ |
 |----|------|---------|
@@ -157,8 +157,8 @@ M1 以降の詳細計画は設計書を前提にするため、先に要件と�
 
 | # | タスク | 成果物 |
 |---|--------|--------|
-| D1 | 技術調査を確認日付きで移す | `docs/research/` (Bun、Markdown パーサー比較、Shiki、Mermaid、gitignore 判定、Tailscale 経由の制約、mise 配布、類似ツール) |
-| D2 | 要件と設計をトピックごとに移す | `docs/design/` (全体設計、保存先とセッション、データモデル、プロンプト出力仕様、CLI 仕様、設定ファイル、画面構成、配布) |
+| D1 (完了) | 技術調査を確認日付きで移す | `docs/research/` (Bun、Markdown パーサー比較、Shiki、Mermaid、gitignore 判定、Tailscale 経由の制約、mise 配布、類似ツール) |
+| D2 (完了) | 要件と設計をトピックごとに移す | `docs/design/` (要件、全体設計、ファイル一覧と表示、Markdown Preview、API、セキュリティ、保存先とセッション、データモデル、プロンプト出力仕様、CLI 仕様、設定ファイル、画面構成、配布) |
 | D3 | 後戻りコストの高い決定を ADR にする | `docs/adr/` (単一バイナリと Bun の採用 / markdown-it の採用 / 保存先とセッション単位の SQLite / gitignore 判定を Git に委ねる / mise の `github:` で配布) |
 | D4 | `docs/AGENTS.md` と `docs/README.md` を akapen 向けに直す | 現在の本文は別プロジェクト (Go の SDK) 向けのままで、プロジェクト概要・設計書の書き分けが akapen に合っていない |
 
@@ -307,20 +307,20 @@ M1 以降の詳細計画は設計書を前提にするため、先に要件と�
 
 要件メモから引き継いだもの:
 
-- [ ] GitHub リポジトリの作成 (当面は private) と、public にする時期
-- [ ] 保持期間の既定値 (`idle_days = 60` / `ended_days = 14` で良いか)
-- [ ] プロンプトの前置きテンプレートと省略閾値の既定値
-- [ ] コピー時の自動 Resolve を既定で ON にするか
-- [ ] `tailscale serve` の ID ヘッダー (`Tailscale-User-Login`) で Nickname を自動入力するか
+- [x] GitHub リポジトリの作成 → `dannygim/akapen` を private で作成済み。public にする時期は未定 (public にするかはリポジトリの持ち主が決める)
+- [x] 保持期間の既定値 → `idle_days = 60` / `ended_days = 14` ([設定ファイル.md](../design/設定ファイル.md))
+- [x] プロンプトの前置きと省略閾値の既定値 → 前置きは空、`max_anchor_lines = 30` ([プロンプト出力仕様.md](../design/プロンプト出力仕様.md))
+- [x] コピー時の自動 Resolve → 既定は OFF (`resolve_on_copy = false`)
+- [x] `Tailscale-User-Login` による Nickname の自動入力 → v1 では行わない (v2 候補。[要件.md](../design/要件.md))
 
-本計画で新たに出たもの:
+本計画で新たに出たもの (2026-10-23 に D2 で決定):
 
-- [ ] U1: ポートを明示したときは空きポートに移らない、とする範囲。M0 では CLI フラグのみを「明示」とした。環境変数と `config.toml` の `server.port` も明示扱いにするか (`tailscale serve 4400` が指す先がずれないよう、明示扱いを推奨)
-- [ ] U2: `max_anchor_lines` を超えたときに先頭と末尾を何行ずつ残すか
-- [ ] U3: REST の書き込みへの `Origin` 検証と、`Host` ヘッダーの許可リストを v1 に入れるか (R3)
-- [ ] U4: Markdown の Preview 内のコードフェンスも Shiki でハイライトするか (要件に明記なし。GitHub は行う)
-- [ ] U5: ブラウザの E2E テストに `Bun.WebView` と Playwright のどちらを使うか (M4 の詳細計画までに決める)
-- [ ] U6: M7 のリリースパイプラインを M0 の直後に前倒しするか (R5)
+- [x] U1: `--port` / `AKAPEN_PORT` / `config.toml` の `server.port` のいずれかで明示したら、空きポートに移らない ([CLI_仕様.md](../design/CLI_仕様.md))
+- [x] U2: 先頭 `ceil((max - 1) / 2)` 行と末尾 `floor((max - 1) / 2)` 行を残し、省略の 1 行と合わせて `max` 行にする ([プロンプト出力仕様.md](../design/プロンプト出力仕様.md))
+- [x] U3: v1 に入れる。`Host` ヘッダーの許可リスト + 書き込みと WebSocket のトークン + WebSocket の `Origin` 検証 ([セキュリティ.md](../design/セキュリティ.md))
+- [x] U4: ハイライトする ([Markdown_Preview.md](../design/Markdown_Preview.md))
+- [x] U5: `Bun.WebView` を使う ([全体設計.md](../design/全体設計.md))
+- [x] U6: CI (`bun run verify` を macOS / Linux で実行) だけを前倒しし、D の直後に入れる。リリースのパイプラインは M7 のまま ([配布.md](../design/配布.md))
 
 ***
 
