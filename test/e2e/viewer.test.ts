@@ -66,9 +66,9 @@ test("opens the file named in the URL hash and reveals it in the tree", async ()
   await using view = new Bun.WebView({ width: 1000, height: 700 });
   await view.navigate(new URL("/#/doc/doc/A.md", server.url).href);
   await waitFor(view, `!!document.querySelector(".markdown h1")`);
-  expect(
-    await view.evaluate(
-      `document.querySelector('[data-path="doc/A.md"]').getAttribute("aria-current")`,
-    ),
-  ).toBe("page");
+  // The tree loads in parallel with the file, so wait for it separately.
+  await waitFor(
+    view,
+    `document.querySelector('[data-path="doc/A.md"]')?.getAttribute("aria-current") === "page"`,
+  );
 }, 30_000);
