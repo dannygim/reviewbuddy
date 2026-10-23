@@ -64,7 +64,7 @@ function ViewerBody({ state, mode }: { state: State; mode: Mode }) {
       return <p className="viewer-note">Binary file not shown.</p>;
     case "markdown":
       return mode === "preview" ? (
-        <MarkdownPreview html={view.previewHtml} />
+        <MarkdownPreview path={view.path} html={view.previewHtml} />
       ) : (
         <CodeView path={view.path} lineHtml={view.lineHtml} />
       );

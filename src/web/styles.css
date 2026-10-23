@@ -541,6 +541,46 @@ button:disabled {
   vertical-align: middle;
 }
 
+.preview-wrap {
+  position: relative;
+}
+
+.block-add {
+  position: absolute;
+  left: 0.375rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.markdown .preview-selected {
+  background: var(--line-selected);
+}
+
+.markdown .preview-slot {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.markdown li > .preview-slot {
+  list-style: none;
+}
+
+.markdown tr.preview-slot,
+.markdown tr.preview-slot td {
+  background: none;
+}
+
 .mermaid-error {
   padding: 1rem;
   border: 1px solid var(--danger);
