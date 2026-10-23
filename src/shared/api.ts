@@ -22,3 +22,35 @@ export type FileView =
       previewHtml: string;
     } & TextFields)
   | { kind: "image" | "binary"; path: string; mtime: number };
+
+export type Comment = {
+  id: string;
+  threadId: string;
+  /** Nickname (self-declared). */
+  author: string;
+  /** Random per-browser ID; edits and deletes are limited to the same ID. */
+  clientId: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string | null;
+};
+
+export type Thread = {
+  id: string;
+  path: string;
+  /** 1-based, inclusive. */
+  startLine: number;
+  endLine: number;
+  /** The selected source lines when the thread was created. */
+  anchorText: string;
+  originView: "source" | "preview";
+  status: "open" | "resolved";
+  outdated: boolean;
+  createdBy: string;
+  createdAt: string;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  exportedAt: string | null;
+  /** The first comment starts the thread; the rest are replies. */
+  comments: Comment[];
+};
