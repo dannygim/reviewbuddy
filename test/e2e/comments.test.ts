@@ -108,10 +108,13 @@ test("comments on source lines, then replies and resolves", async () => {
   );
 
   // After a reload the thread is still there and the nickname is remembered.
+  // The mark tells the reloaded page from the old one, which reload() may
+  // still show when it returns.
+  await view.evaluate("window.beforeReload = true");
   await view.reload();
   await waitFor(
     view,
-    `!!document.querySelector('.thread[data-status="resolved"]')`,
+    `!window.beforeReload && !!document.querySelector('.thread[data-status="resolved"]')`,
   );
   expect(await view.evaluate(`!!document.querySelector(".dialog")`)).toBe(
     false,
