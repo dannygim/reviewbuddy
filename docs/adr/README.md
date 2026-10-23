@@ -53,3 +53,9 @@ proposed → accepted → superseded
 
 | ID | Title | Status |
 |----|-------|--------|
+| [0001](./0001-bun-single-binary.md) | Bun で実装し、単一バイナリとして配る | accepted |
+| [0002](./0002-markdown-it.md) | Markdown のレンダリングに markdown-it を使う | accepted |
+| [0003](./0003-session-storage.md) | コメントは ~/.config/akapen にセッション単位の SQLite で保存する | accepted |
+| [0004](./0004-git-ls-files.md) | File Tree の除外判定を git ls-files に任せる | accepted |
+| [0005](./0005-distribution-mise-github.md) | GitHub Releases と mise の github バックエンドで配る | accepted |
+| [0006](./0006-security-without-auth.md) | 認証なしのまま、Host の許可リストとトークンでブラウザ経由の攻撃を防ぐ | accepted |

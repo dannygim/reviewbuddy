@@ -159,8 +159,8 @@ M1 以降の詳細計画は設計書を前提にするため、先に要件と�
 |---|--------|--------|
 | D1 (完了) | 技術調査を確認日付きで移す | `docs/research/` (Bun、Markdown パーサー比較、Shiki、Mermaid、gitignore 判定、Tailscale 経由の制約、mise 配布、類似ツール) |
 | D2 (完了) | 要件と設計をトピックごとに移す | `docs/design/` (要件、全体設計、ファイル一覧と表示、Markdown Preview、API、セキュリティ、保存先とセッション、データモデル、プロンプト出力仕様、CLI 仕様、設定ファイル、画面構成、配布) |
-| D3 | 後戻りコストの高い決定を ADR にする | `docs/adr/` (単一バイナリと Bun の採用 / markdown-it の採用 / 保存先とセッション単位の SQLite / gitignore 判定を Git に委ねる / mise の `github:` で配布) |
-| D4 | `docs/AGENTS.md` と `docs/README.md` を akapen 向けに直す | 現在の本文は別プロジェクト (Go の SDK) 向けのままで、プロジェクト概要・設計書の書き分けが akapen に合っていない |
+| D3 (完了) | 後戻りコストの高い決定を ADR にする | `docs/adr/` (ADR-0001〜0006: 単一バイナリと Bun / markdown-it / 保存先とセッション単位の SQLite / gitignore 判定を Git に委ねる / mise の `github:` で配布 / 認証なしのセキュリティモデル) |
+| D4 (完了) | `docs/AGENTS.md` と `docs/README.md` を akapen 向けに直す | 別プロジェクト (Go の SDK) 向けだったプロジェクト概要・設計書の書き分け・テンプレートを akapen 向けにした |
 
 ### M0: 骨組み
 
