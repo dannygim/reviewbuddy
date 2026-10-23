@@ -23,14 +23,14 @@ Preview 上のコメントの肝。各ブロック要素に、元ファイルの
 1. markdown-it でトークン化すると、ブロックトークンに `map = [開始行, 終了行)` (0 始まり・終了行は含まない) が付く
 2. レンダラーを拡張し、次のトークンが作る要素に `data-src-start` / `data-src-end` (1 始まり・両端を含む) を付ける
 
-   `heading_open` / `paragraph_open` / `list_item_open` / `tr_open` / `blockquote_open` / `fence` / `code_block` / `hr` / `html_block`
+   `heading_open` / `paragraph_open` / `list_item_open` / `tr_open` / `blockquote_open` / `fence` / `code_block` / `hr`
 
 3. 末尾の空行は範囲から除く (リストなどは後続の空行まで `map` に含まれるため)
 4. クライアントは、ホバーした位置から最も内側の `data-src-*` を持つ要素を選び、その行範囲でスレッドを作る
 5. 表はヘッダー行と各データ行に個別にコメントできる (区切り行はどの行にも属さない)。Mermaid やコードブロックはフェンス全体 (フェンス記号の行を含む) が対象
 6. スレッドの `anchor_text` は常に**元ファイルの該当行**から切り出す (Preview の表示テキストではない)。Agent にはソースがそのまま渡る
 
-`html_block` で生の HTML を出す場合は、ブロックを `<div data-src-start data-src-end>` で包んで属性を付ける。
+生の HTML のブロック (`html_block`) には属性を付けない。`<details>` のように Markdown をはさんで複数のブロックにまたがる HTML を包むと、構造が壊れるため。中の Markdown のブロックには属性が付き、HTML そのものへのコメントは Source 表示で行う。
 
 ***
 
