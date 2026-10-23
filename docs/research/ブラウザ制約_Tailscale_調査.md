@@ -38,6 +38,7 @@
 - `tailscale serve` 経由で WebSocket が通る **確認済** (2026-10-23、Tailscale 1.104.1、macOS。`tailscale serve --https=8443 <port>` の HTTPS 経由で `/api/health` と `/ws` の upgrade が通り、プレゼンスのイベントが届いた)
 - 同じ端末で 443 番をすでに別のサービスに使っていると、`tailscale serve <port>` は `listener already exists for port 443` で失敗する。`--https=<port>` で別の HTTPS ポートに出せる (`https://<マシン名>.<tailnet>.ts.net:<port>/`) **確認済** (実行)
 - `--set-path` でサブパスに出すと、akapen は `/api` や `/ws`・チャンクを絶対パスで読むため動かない (設計から判断。実行はしていない) **要検証**
+- 前面モード (`--bg` なし) の `tailscale serve` を SIGTERM で止めると、設定が `Foreground` のエントリとして残り、同じポートに `listener already exists for port <port>` で出せなくなることがある。`tailscale serve status` には出ず、`--json` で見える。`tailscale serve --https=<port> off` では消えず、消せたのは `tailscale serve reset` (他の設定も消える) だけだった **確認済** (2026-10-23、Tailscale 1.104.1、macOS で観測)。止めるときは Ctrl+C を使うか、`--bg` で出して `--https=<port> off` で外す
 
 ***
 
