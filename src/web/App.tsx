@@ -8,6 +8,7 @@ import { clientId, useNickname } from "./identity";
 import { NicknameDialog } from "./NicknameDialog";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
 import { announce, announceView, connectRealtime } from "./realtime";
+import { ReviewPanel } from "./ReviewPanel";
 import { openDoc, useDocPath } from "./router";
 import { threadStore, useThreads } from "./store";
 import { Viewer } from "./Viewer";
@@ -18,6 +19,7 @@ export function App() {
   const [error, setError] = useState(false);
   const [nickname, setNickname] = useNickname();
   const [renaming, setRenaming] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
@@ -112,6 +114,16 @@ export function App() {
           </span>
           {session && <span className="muted">session {session.id}</span>}
           <span className="app-spacer" />
+          {session && (
+            <button
+              className="app-review"
+              data-action="review"
+              aria-pressed={reviewing}
+              onClick={() => setReviewing(!reviewing)}
+            >
+              Review ({threads.filter((t) => t.status === "open").length})
+            </button>
+          )}
           <span className="presence">
             {nickname && (
               <button className="app-me" onClick={() => setRenaming(true)}>
@@ -154,6 +166,7 @@ export function App() {
               <p className="viewer-note">Select a file to start reviewing.</p>
             )}
           </main>
+          {reviewing && <ReviewPanel onClose={() => setReviewing(false)} />}
         </div>
       </div>
       {(askNickname || renaming) && (

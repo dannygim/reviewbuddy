@@ -2,6 +2,7 @@ import type {
   Comment,
   ErrorResponse,
   FileView,
+  PromptResponse,
   SessionInfo,
   Thread,
   TreeResponse,
@@ -69,3 +70,10 @@ export const resolveThread = (id: string, author: string) =>
 
 export const reopenThread = (id: string) =>
   send<Thread>("POST", `/api/threads/${id}/reopen`, {});
+
+export const requestPrompt = (
+  threadIds: string[],
+  resolve: boolean,
+  author: string,
+) =>
+  send<PromptResponse>("POST", "/api/prompt", { threadIds, resolve, author });
