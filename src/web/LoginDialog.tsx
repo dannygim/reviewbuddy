@@ -34,7 +34,7 @@ export function LoginDialog({ initialNickname, onJoin }: Props) {
       >
         <h2>Join the review</h2>
         <p className="muted">
-          Enter your nickname and the 6-digit PIN shown where akapen was
+          Enter your nickname and the 6-digit PIN shown where reviewbuddy was
           started.
         </p>
         <label>

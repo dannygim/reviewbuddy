@@ -7,7 +7,7 @@ import { FileIndex } from "./files/file-index";
 import { type AppServer, startServer } from "./server";
 import { VERSION } from "./version";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-server-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-server-")));
 writeFileSync(join(root, "a.ts"), "const a = 1;\n");
 writeFileSync(join(root, "README.md"), "# Hi\n");
 writeFileSync(
@@ -49,7 +49,7 @@ describe("startServer", () => {
     const res = await get("/api/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      name: "akapen",
+      name: "reviewbuddy",
       version: VERSION,
       sessionId: testSession().meta.id,
     });

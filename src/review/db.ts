@@ -38,7 +38,7 @@ export function openReviewDb(path: string): Database {
   const db = new Database(path, { strict: true });
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
-  // `akapen export` may read while the server writes.
+  // `reviewbuddy export` may read while the server writes.
   db.exec("PRAGMA busy_timeout = 5000");
   const { user_version } = db.query("PRAGMA user_version").get() as {
     user_version: number;

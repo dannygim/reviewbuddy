@@ -1,6 +1,6 @@
 // Builds the single-binary executable. `bun run build` runs this; the release
 // workflow adds --target to cross-compile (docs/design/配布.md).
-// Usage: bun scripts/build.ts [--target bun-linux-x64] [--outfile dist/akapen]
+// Usage: bun scripts/build.ts [--target bun-linux-x64] [--outfile dist/reviewbuddy]
 import { parseArgs } from "node:util";
 
 const { values } = parseArgs({
@@ -11,7 +11,7 @@ const { values } = parseArgs({
 const result = await Bun.build({
   entrypoints: ["src/cli.ts"],
   compile: {
-    outfile: values.outfile ?? "dist/akapen",
+    outfile: values.outfile ?? "dist/reviewbuddy",
     ...(values.target && { target: values.target as Bun.Build.CompileTarget }),
     // The binary runs inside the reviewed project: never load its .env or bunfig.toml.
     autoloadDotenv: false,

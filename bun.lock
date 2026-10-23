@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "akapen",
+      "name": "reviewbuddy",
       "dependencies": {
         "dompurify": "3.4.17",
         "ignore": "7.0.13",

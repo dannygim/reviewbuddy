@@ -7,7 +7,7 @@ import { AccessGate } from "./auth";
 import { FileIndex } from "./files/file-index";
 import { type AppServer, startServer } from "./server";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-auth-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-auth-")));
 writeFileSync(join(root, "a.md"), "# A\n");
 writeFileSync(
   join(root, "logo.svg"),
@@ -70,7 +70,7 @@ describe("without the PIN", () => {
     const res = await fetch(url(path));
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
-      error: "Enter the PIN shown where akapen was started.",
+      error: "Enter the PIN shown where reviewbuddy was started.",
     });
   });
 
@@ -79,7 +79,7 @@ describe("without the PIN", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Akapen-Token": TEST_TOKEN,
+        "X-Reviewbuddy-Token": TEST_TOKEN,
       },
       body: "{}",
     });
@@ -90,7 +90,7 @@ describe("without the PIN", () => {
     expect((await fetch(url("/"))).status).toBe(200);
     const health = await (await fetch(url("/api/health"))).json();
     expect(health).toEqual({
-      name: "akapen",
+      name: "reviewbuddy",
       version: expect.any(String),
       sessionId: testSession().meta.id,
     });
@@ -114,7 +114,7 @@ describe("logging in", () => {
     const res = await login("482913");
     expect(res.headers.get("set-cookie")).toMatch(
       new RegExp(
-        `^akapen_auth_${server.port}=[0-9a-f]{64}; HttpOnly; SameSite=Strict; Path=/$`,
+        `^reviewbuddy_auth_${server.port}=[0-9a-f]{64}; HttpOnly; SameSite=Strict; Path=/$`,
       ),
     );
     const auth = await cookie();

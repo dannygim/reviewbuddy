@@ -6,8 +6,8 @@ import { VERSION } from "../src/version";
 import { webView } from "./support";
 
 const projectDir = join(import.meta.dir, "..");
-const binary = join(projectDir, "dist", "akapen");
-const root = mkdtempSync(join(tmpdir(), "akapen-build-"));
+const binary = join(projectDir, "dist", "reviewbuddy");
+const root = mkdtempSync(join(tmpdir(), "reviewbuddy-build-"));
 writeFileSync(join(root, "plain.md"), "# Plain\n");
 writeFileSync(
   join(root, "diagram.md"),
@@ -26,8 +26,8 @@ beforeAll(async () => {
 
   proc = Bun.spawn([binary, root], {
     stdout: "pipe",
-    // Keep sessions out of the real ~/.config/akapen.
-    env: { ...process.env, AKAPEN_HOME: join(root, ".akapen-home") },
+    // Keep sessions out of the real ~/.config/reviewbuddy.
+    env: { ...process.env, REVIEWBUDDY_HOME: join(root, ".reviewbuddy-home") },
   });
   let output = "";
   for await (const chunk of proc.stdout) {
@@ -53,7 +53,7 @@ test("the compiled binary prints its version", () => {
 
 test("the compiled binary serves the app behind the PIN", async () => {
   const health = await fetch(new URL("/api/health", url)).then((r) => r.json());
-  expect(health).toMatchObject({ name: "akapen", version: VERSION });
+  expect(health).toMatchObject({ name: "reviewbuddy", version: VERSION });
   expect((await fetch(new URL("/api/tree", url))).status).toBe(401);
   const html = await fetch(url).then((r) => r.text());
   expect(html).toContain('<div id="root"></div>');

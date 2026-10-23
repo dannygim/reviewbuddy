@@ -7,7 +7,7 @@ import { FileIndex } from "./files/file-index";
 import { type AppServer, type SessionContext, startServer } from "./server";
 import type { Thread } from "./shared/api";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-threads-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-threads-")));
 writeFileSync(join(root, "a.md"), "# A\n\none\ntwo\n");
 writeFileSync(join(root, "logo.png"), new Uint8Array([137, 80, 78, 71]));
 const index = await FileIndex.create(root);
@@ -51,7 +51,7 @@ function send(
     method,
     headers: {
       "Content-Type": "application/json",
-      "X-Akapen-Token": TEST_TOKEN,
+      "X-Reviewbuddy-Token": TEST_TOKEN,
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -190,7 +190,7 @@ describe("write protection", () => {
       "POST",
       "/api/threads",
       {},
-      { "X-Akapen-Token": "" },
+      { "X-Reviewbuddy-Token": "" },
     );
     expect(res.status).toBe(403);
   });

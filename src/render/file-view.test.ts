@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { renderFile } from "./file-view";
 
-const dir = mkdtempSync(join(tmpdir(), "akapen-view-"));
+const dir = mkdtempSync(join(tmpdir(), "reviewbuddy-view-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 function file(name: string, content: string | Uint8Array): string {

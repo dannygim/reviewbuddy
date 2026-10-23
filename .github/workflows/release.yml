@@ -23,18 +23,18 @@ jobs:
       - name: Check that the tag matches package.json
         run: test "v$(jq -r .version package.json)" = "$GITHUB_REF_NAME"
       - name: Build
-        run: bun scripts/build.ts --target "bun-${{ matrix.target }}" --outfile build/akapen
+        run: bun scripts/build.ts --target "bun-${{ matrix.target }}" --outfile build/reviewbuddy
       - name: Sign (ad hoc, with the JIT entitlements Bun recommends)
         if: runner.os == 'macOS'
         run: |
-          codesign --force --sign - --entitlements packaging/entitlements.plist build/akapen
-          codesign --verify --verbose build/akapen
+          codesign --force --sign - --entitlements packaging/entitlements.plist build/reviewbuddy
+          codesign --verify --verbose build/reviewbuddy
       - name: Package
-        run: tar -czf "akapen-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz" -C build akapen
+        run: tar -czf "reviewbuddy-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz" -C build reviewbuddy
       - uses: actions/upload-artifact@v7
         with:
-          name: akapen-${{ matrix.target }}
-          path: akapen-*.tar.gz
+          name: reviewbuddy-${{ matrix.target }}
+          path: reviewbuddy-*.tar.gz
 
   release:
     needs: build
@@ -42,14 +42,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          pattern: akapen-*
+          pattern: reviewbuddy-*
           merge-multiple: true
-      - run: sha256sum akapen-*.tar.gz > checksums.txt
+      - run: sha256sum reviewbuddy-*.tar.gz > checksums.txt
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "$GITHUB_REF_NAME" akapen-*.tar.gz checksums.txt
+          gh release create "$GITHUB_REF_NAME" reviewbuddy-*.tar.gz checksums.txt
           --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
 
   smoke:

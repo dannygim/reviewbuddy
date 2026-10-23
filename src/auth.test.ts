@@ -32,12 +32,12 @@ describe("AccessGate", () => {
     const gate = new AccessGate("482913");
     const result = gate.login("482 913");
     if (!result.ok) throw new Error(result.error);
-    expect(name).toBe("akapen_auth_4400");
+    expect(name).toBe("reviewbuddy_auth_4400");
     expect(gate.isAuthorized(`${name}=${result.token}`, name)).toBe(true);
     expect(gate.isAuthorized(`other=1; ${name}=${result.token}`, name)).toBe(
       true,
     );
-    // Another akapen on the same host uses another port.
+    // Another reviewbuddy on the same host uses another port.
     expect(
       gate.isAuthorized(`${name}=${result.token}`, authCookieName(4401)),
     ).toBe(false);

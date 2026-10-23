@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { UsageError } from "./args";
 import { displayRoot, resolveRoot } from "./root";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-root-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-root-"));
 mkdirSync(join(base, "project"));
 writeFileSync(join(base, "file.txt"), "x");
 

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { openReviewDb } from "./db";
 import { ReviewError, ReviewStore } from "./store";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-review-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-review-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 let db: Database;

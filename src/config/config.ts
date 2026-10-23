@@ -27,7 +27,7 @@ export const DEFAULT_CONFIG: Config = {
   retention: { idleDays: 60, endedDays: 14 },
 };
 
-/** An invalid config.toml or environment value; akapen does not start. */
+/** An invalid config.toml or environment value; reviewbuddy does not start. */
 export class ConfigError extends Error {}
 
 type Kind = { check: (value: unknown) => boolean; describe: string };
@@ -130,11 +130,11 @@ export function loadConfig(
     }
   }
 
-  if (env.AKAPEN_HOST) config.server.host = env.AKAPEN_HOST;
-  if (env.AKAPEN_PORT) {
-    const port = Number(env.AKAPEN_PORT);
+  if (env.REVIEWBUDDY_HOST) config.server.host = env.REVIEWBUDDY_HOST;
+  if (env.REVIEWBUDDY_PORT) {
+    const port = Number(env.REVIEWBUDDY_PORT);
     if (!PORT.check(port)) {
-      throw new ConfigError(`AKAPEN_PORT must be ${PORT.describe}`);
+      throw new ConfigError(`REVIEWBUDDY_PORT must be ${PORT.describe}`);
     }
     config.server.port = port;
     portExplicit = true;
@@ -157,7 +157,7 @@ const tomlValue = (value: unknown): string =>
       ? JSON.stringify(value) // JSON escapes are valid TOML basic-string escapes
       : String(value);
 
-/** The effective configuration as TOML (`akapen config show`). */
+/** The effective configuration as TOML (`reviewbuddy config show`). */
 export function configToToml(config: Config): string {
   return Object.entries(SCHEMA)
     .map(([section, fields]) => {

@@ -41,7 +41,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 function send<T>(method: string, path: string, body: unknown): Promise<T> {
   return request<T>(path, {
     method,
-    headers: { "Content-Type": "application/json", "X-Akapen-Token": token },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Reviewbuddy-Token": token,
+    },
     body: JSON.stringify(body),
   });
 }

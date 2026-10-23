@@ -1,14 +1,14 @@
-/** Written by `akapen config init`; every value shown is the default. */
-export const CONFIG_TEMPLATE = `# akapen configuration. Every key is optional; the values below are the defaults.
-# Precedence: command-line flags > environment variables (AKAPEN_PORT, AKAPEN_HOST) > this file.
+/** Written by `reviewbuddy config init`; every value shown is the default. */
+export const CONFIG_TEMPLATE = `# reviewbuddy configuration. Every key is optional; the values below are the defaults.
+# Precedence: command-line flags > environment variables (REVIEWBUDDY_PORT, REVIEWBUDDY_HOST) > this file.
 
 [server]
 # Address to bind. "0.0.0.0" lets other devices on your tailnet connect directly.
 host = "127.0.0.1"
-# A port set here (or in AKAPEN_PORT or --port) is fixed: akapen will not move to
+# A port set here (or in REVIEWBUDDY_PORT or --port) is fixed: reviewbuddy will not move to
 # the next free port, so a proxy such as \`tailscale serve 4400\` keeps working.
 # port = 4400
-# Open the browser when akapen starts (--open / --no-open).
+# Open the browser when reviewbuddy starts (--open / --no-open).
 open_browser = false
 # Host names to accept besides IP addresses, localhost and *.ts.net,
 # e.g. a MagicDNS short name: ["mymac"].

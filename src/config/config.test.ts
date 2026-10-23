@@ -17,7 +17,7 @@ import {
 } from "./config";
 import { CONFIG_TEMPLATE } from "./template";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-config-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-config-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 let n = 0;
 function home(toml?: string): string {
@@ -81,7 +81,7 @@ ended_days = 3
   test("lets environment variables override the file", () => {
     const { config, portExplicit } = loadConfig(
       home('[server]\nhost = "0.0.0.0"\n'),
-      { AKAPEN_HOST: "127.0.0.2", AKAPEN_PORT: "4500" },
+      { REVIEWBUDDY_HOST: "127.0.0.2", REVIEWBUDDY_PORT: "4500" },
     );
     expect(config.server).toMatchObject({ host: "127.0.0.2", port: 4500 });
     expect(portExplicit).toBe(true);
@@ -131,8 +131,8 @@ ended_days = 3
   });
 
   test("rejects invalid environment values", () => {
-    expect(() => loadConfig(home(), { AKAPEN_PORT: "abc" })).toThrow(
-      "AKAPEN_PORT must be an integer from 0 to 65535",
+    expect(() => loadConfig(home(), { REVIEWBUDDY_PORT: "abc" })).toThrow(
+      "REVIEWBUDDY_PORT must be an integer from 0 to 65535",
     );
   });
 });

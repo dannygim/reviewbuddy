@@ -7,7 +7,9 @@ import { FileIndex } from "./files/file-index";
 import { type AppServer, startServer } from "./server";
 import type { ServerEvent } from "./shared/events";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-server-watch-")));
+const root = realpathSync(
+  mkdtempSync(join(tmpdir(), "reviewbuddy-server-watch-")),
+);
 writeFileSync(join(root, "a.md"), "one\ntwo\nthree\n");
 let server: AppServer;
 afterAll(async () => {
@@ -31,7 +33,7 @@ test("a file edit moves its threads and tells the browsers", async () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Akapen-Token": TEST_TOKEN,
+      "X-Reviewbuddy-Token": TEST_TOKEN,
     },
     body: JSON.stringify({
       path: "a.md",

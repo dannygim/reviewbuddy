@@ -7,7 +7,7 @@ import { FileIndex } from "../files/file-index";
 import { type AppServer, startServer } from "../server";
 import type { ClientMessage, ServerEvent } from "../shared/events";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-hub-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-hub-")));
 writeFileSync(join(root, "a.md"), "one\ntwo\n");
 let server: AppServer;
 
@@ -85,7 +85,7 @@ async function postThread(body: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Akapen-Token": TEST_TOKEN,
+      "X-Reviewbuddy-Token": TEST_TOKEN,
     },
     body: JSON.stringify({
       path: "a.md",

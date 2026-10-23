@@ -14,13 +14,13 @@ import { ReviewStore } from "../src/review/store";
 import { openSession } from "../src/session/session";
 
 const cli = join(import.meta.dir, "..", "src", "cli.ts");
-const base = realpathSync(mkdtempSync(join(tmpdir(), "akapen-cli-")));
+const base = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-cli-")));
 const home = join(base, "home");
 const root = join(base, "project");
 Bun.spawnSync(["mkdir", "-p", root]);
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
-const env = { ...process.env, AKAPEN_HOME: home };
+const env = { ...process.env, REVIEWBUDDY_HOME: home };
 
 async function startCli(...args: string[]) {
   const proc = Bun.spawn([process.execPath, cli, ...args], {
@@ -69,7 +69,7 @@ test("an unknown --session is an error", () => {
   expect(result.stderr.toString()).toContain("Session not found: nope");
 });
 
-describe("akapen export", () => {
+describe("reviewbuddy export", () => {
   const exportRoot = join(base, "export-project");
   Bun.spawnSync(["mkdir", "-p", exportRoot]);
 
@@ -138,9 +138,9 @@ describe("akapen export", () => {
   });
 });
 
-describe("akapen config and session", () => {
+describe("reviewbuddy config and session", () => {
   const configHome = join(base, "config-home");
-  const configEnv = { ...process.env, AKAPEN_HOME: configHome };
+  const configEnv = { ...process.env, REVIEWBUDDY_HOME: configHome };
   const run = (...args: string[]) =>
     Bun.spawnSync([process.execPath, cli, ...args], { env: configEnv });
 
@@ -156,7 +156,7 @@ describe("akapen config and session", () => {
     expect(shown).toContain('[server]\nhost = "127.0.0.1"\nport = 4400\n');
   });
 
-  test("an invalid config.toml stops akapen with the key path", () => {
+  test("an invalid config.toml stops reviewbuddy with the key path", () => {
     writeFileSync(join(configHome, "config.toml"), '[server]\nport = "x"\n');
     const result = run(root);
     expect(result.exitCode).toBe(1);

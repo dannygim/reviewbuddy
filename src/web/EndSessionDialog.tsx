@@ -22,7 +22,7 @@ export function EndSessionDialog({ onCancel, onReview, onEnd }: Props) {
         </p>
         <p className="muted">
           Copy the prompt from Review first if you still need it. To keep
-          everything, run <code>akapen export --format jsonl</code>.
+          everything, run <code>reviewbuddy export --format jsonl</code>.
         </p>
         {error && <p className="composer-error">{error}</p>}
         <div className="dialog-actions">

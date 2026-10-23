@@ -18,7 +18,7 @@ import {
   touchSession,
 } from "./session";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-session-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-session-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 let n = 0;
 const freshHome = () => join(base, `home${n++}`);

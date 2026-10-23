@@ -17,7 +17,7 @@ import {
   writeSession,
 } from "./session";
 
-// `akapen session ...` (docs/design/CLI_仕様.md). Each returns what to print.
+// `reviewbuddy session ...` (docs/design/CLI_仕様.md). Each returns what to print.
 
 export function listSessionsText(home: string, all: boolean): string {
   const sessions = listSessions(home).filter(

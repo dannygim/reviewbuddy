@@ -16,7 +16,7 @@ afterAll(() => {
 });
 
 function fixture(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "akapen-index-"));
+  const root = mkdtempSync(join(tmpdir(), "reviewbuddy-index-"));
   created.push(root);
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -134,6 +134,8 @@ describe("listFiles robustness", () => {
   });
 
   test("returns nothing for a root that no longer exists", async () => {
-    expect(await listFiles(join(tmpdir(), "akapen-missing-root"))).toEqual([]);
+    expect(await listFiles(join(tmpdir(), "reviewbuddy-missing-root"))).toEqual(
+      [],
+    );
   });
 });

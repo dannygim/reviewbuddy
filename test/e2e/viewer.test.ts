@@ -12,7 +12,7 @@ import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
 import { testSession, webView } from "../support";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-e2e-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-e2e-")));
 mkdirSync(join(root, "doc"));
 mkdirSync(join(root, "src"));
 writeFileSync(join(root, "doc/A.md"), "# A\n\nbody\n");

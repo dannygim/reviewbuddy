@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 // Access PIN (docs/adr/0007-access-pin.md): a new 6-digit PIN each start,
 // entered once per browser, which then gets a cookie.
 
-const AUTH_COOKIE = "akapen_auth";
+const AUTH_COOKIE = "reviewbuddy_auth";
 
 const PIN_PATTERN = /^\d{6}$/;
 // Largest multiple of 1,000,000 below 2^32, so `% 1_000_000` stays uniform.
@@ -58,7 +58,7 @@ export class AccessGate {
         ok: false,
         status: 403,
         error:
-          "Too many wrong PINs. Ask the host to restart akapen for a new PIN.",
+          "Too many wrong PINs. Ask the host to restart reviewbuddy for a new PIN.",
       };
     }
     // Counted for everyone together: behind `tailscale serve`, all requests

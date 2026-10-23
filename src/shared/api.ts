@@ -1,5 +1,5 @@
 export type Health = {
-  name: "akapen";
+  name: "reviewbuddy";
   version: string;
   sessionId: string;
 };
@@ -11,7 +11,7 @@ export type SessionInfo = {
   rootDisplay: string;
   status: "active" | "ended";
   readOnly: boolean;
-  /** Send as X-Akapen-Token on writes. */
+  /** Send as X-Reviewbuddy-Token on writes. */
   token: string;
   /** Default of "Resolve copied threads" (config prompt.resolve_on_copy). */
   resolveOnCopy: boolean;

@@ -6,7 +6,9 @@ import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
 import { testSession, webView } from "../support";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-watch-e2e-")));
+const root = realpathSync(
+  mkdtempSync(join(tmpdir(), "reviewbuddy-watch-e2e-")),
+);
 writeFileSync(join(root, "a.ts"), "export const a = 1;\n");
 let server: AppServer;
 

@@ -24,7 +24,7 @@ import {
   writeSession,
 } from "./session";
 
-const base = realpathSync(mkdtempSync(join(tmpdir(), "akapen-cmd-")));
+const base = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-cmd-")));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 let n = 0;
 function setup() {

@@ -22,14 +22,14 @@ import index from "./web/index.html";
 export type SessionContext = {
   meta: SessionMeta;
   readOnly: boolean;
-  /** Required in X-Akapen-Token on every write. */
+  /** Required in X-Reviewbuddy-Token on every write. */
   token: string;
   store: ReviewStore;
   /** Records activity; called after each successful write. */
   touch(): void;
   /** Marks the session ended in session.json. */
   end(): void;
-  /** Re-reads session.json, to notice `akapen session end` from outside. */
+  /** Re-reads session.json, to notice `reviewbuddy session end` from outside. */
   reload(): SessionMeta | null;
 };
 
@@ -57,7 +57,7 @@ export type ServerOptions = {
 export type AppServer = Bun.Server<SocketData>;
 
 const PORT_ATTEMPTS = 20;
-const NEED_PIN = "Enter the PIN shown where akapen was started.";
+const NEED_PIN = "Enter the PIN shown where reviewbuddy was started.";
 const RAW_HEADERS = {
   // A raw SVG opened directly must not run scripts in our origin.
   "Content-Security-Policy":
@@ -85,7 +85,7 @@ function listen(options: ServerOptions, port: number): AppServer {
   const hub = new Hub();
   // Open without the PIN (to find a running server), so no root path.
   const health: Health = {
-    name: "akapen",
+    name: "reviewbuddy",
     version: VERSION,
     sessionId: session.meta.id,
   };
@@ -115,7 +115,7 @@ function listen(options: ServerOptions, port: number): AppServer {
     handler: (req: Request, body: Body) => Response | Promise<Response>,
   ): Handler =>
     guard(async (req) => {
-      if (req.headers.get("x-akapen-token") !== session.token) {
+      if (req.headers.get("x-reviewbuddy-token") !== session.token) {
         return errorResponse(403, "Missing or invalid token");
       }
       if (!req.headers.get("content-type")?.includes("application/json")) {
@@ -281,7 +281,7 @@ function listen(options: ServerOptions, port: number): AppServer {
   hub.attach(server);
 
   // Started only once listening succeeded (listen may be retried on another port).
-  // `akapen session end` only edits session.json; notice it within seconds.
+  // `reviewbuddy session end` only edits session.json; notice it within seconds.
   const poll = setInterval(() => {
     if (session.readOnly) return;
     const latest = session.reload();
@@ -307,7 +307,7 @@ function listen(options: ServerOptions, port: number): AppServer {
       (change) =>
         onChange(change).catch((error) => {
           // A failed refresh must not take the server down; the next change retries.
-          console.error("akapen: watching failed:", error);
+          console.error("reviewbuddy: watching failed:", error);
         }),
     );
   }

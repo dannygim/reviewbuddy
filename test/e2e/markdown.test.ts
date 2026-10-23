@@ -38,7 +38,7 @@ const GUIDE = [
   "",
 ].join("\n");
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-md-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-md-")));
 mkdirSync(join(root, "doc"));
 writeFileSync(join(root, "doc/guide.md"), GUIDE);
 writeFileSync(join(root, "doc/other.md"), "# Other\n");

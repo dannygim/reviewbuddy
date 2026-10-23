@@ -30,7 +30,7 @@ import {
   removeSessions,
   reopenSessionCommand,
 } from "./session/commands";
-import { akapenHome } from "./session/home";
+import { reviewbuddyHome } from "./session/home";
 import { findRunningServer, removeLock, writeLock } from "./session/lock";
 import {
   localIso,
@@ -46,7 +46,7 @@ import { VERSION } from "./version";
 function settings(home: string) {
   const loaded = loadConfig(home);
   for (const warning of loaded.warnings)
-    console.error(`akapen: warning: ${warning}`);
+    console.error(`reviewbuddy: warning: ${warning}`);
   return loaded;
 }
 
@@ -73,7 +73,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
 
   const running = await findRunningServer(dir, meta.id);
   if (running) {
-    console.log(`akapen is already reviewing ${root}`);
+    console.log(`reviewbuddy is already reviewing ${root}`);
     console.log(`  ${running}`);
     if (open) openBrowser(running);
     return;
@@ -87,7 +87,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
     ),
     store: new ReviewStore(openReviewDb(join(dir, "review.db"))),
     touch() {
-      // Never write back "active" over an end from `akapen session end`.
+      // Never write back "active" over an end from `reviewbuddy session end`.
       if (readSession(home, meta.id)?.status === "ended") return;
       session.meta = touchSession(home, session.meta);
     },
@@ -103,7 +103,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
   };
   const access = new AccessGate(undefined, () =>
     console.error(
-      "akapen: too many wrong PINs; restart akapen to get a new PIN.",
+      "reviewbuddy: too many wrong PINs; restart reviewbuddy to get a new PIN.",
     ),
   );
   const host = command.host ?? config.server.host;
@@ -134,7 +134,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
   process.on("SIGINT", () => process.exit(130));
   process.on("SIGTERM", () => process.exit(143));
 
-  console.log(`akapen ${VERSION} is reviewing ${root}`);
+  console.log(`reviewbuddy ${VERSION} is reviewing ${root}`);
   console.log(`  ${server.url}`);
   console.log(`  PIN: ${formatPin(access.pin)}`);
   if (readOnly)
@@ -162,7 +162,7 @@ function session(
 }
 
 async function run(command: Command): Promise<void> {
-  const home = akapenHome();
+  const home = reviewbuddyHome();
   switch (command.kind) {
     case "help":
       console.log(USAGE);
@@ -211,14 +211,14 @@ Promise.resolve()
   .then(() => run(parseCliArgs(Bun.argv.slice(2))))
   .catch((error) => {
     if (error instanceof UsageError) {
-      console.error(`akapen: ${error.message}\n\n${USAGE}`);
+      console.error(`reviewbuddy: ${error.message}\n\n${USAGE}`);
       process.exitCode = 2;
     } else if (
       error instanceof SessionError ||
       error instanceof ConfigError ||
       (error as { code?: string }).code === "EADDRINUSE"
     ) {
-      console.error(`akapen: ${(error as Error).message}`);
+      console.error(`reviewbuddy: ${(error as Error).message}`);
       process.exitCode = 1;
     } else {
       console.error(error);

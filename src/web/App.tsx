@@ -155,10 +155,10 @@ export function App() {
     <ReviewerContext.Provider value={reviewer}>
       <div className="app">
         <header className="app-header">
-          <strong>akapen</strong>
+          <strong>reviewbuddy</strong>
           <span className="app-root" title={session?.root}>
             {error
-              ? "Cannot reach the akapen server."
+              ? "Cannot reach the reviewbuddy server."
               : locked
                 ? "Enter the PIN to join."
                 : (session?.rootDisplay ?? "Connecting…")}

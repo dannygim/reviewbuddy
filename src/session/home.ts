@@ -8,15 +8,15 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-/** Where config.toml and sessions live: $AKAPEN_HOME, else $XDG_CONFIG_HOME/akapen, else ~/.config/akapen. */
-export function akapenHome(
+/** Where config.toml and sessions live: $REVIEWBUDDY_HOME, else $XDG_CONFIG_HOME/reviewbuddy, else ~/.config/reviewbuddy. */
+export function reviewbuddyHome(
   env: Record<string, string | undefined> = process.env,
 ): string {
-  if (env.AKAPEN_HOME) return env.AKAPEN_HOME;
-  return join(env.XDG_CONFIG_HOME || join(homedir(), ".config"), "akapen");
+  if (env.REVIEWBUDDY_HOME) return env.REVIEWBUDDY_HOME;
+  return join(env.XDG_CONFIG_HOME || join(homedir(), ".config"), "reviewbuddy");
 }
 
-// Comments may contain secrets, so everything akapen writes is private to the user.
+// Comments may contain secrets, so everything reviewbuddy writes is private to the user.
 export function ensurePrivateDir(path: string): void {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   chmodSync(path, 0o700);

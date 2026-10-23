@@ -10,7 +10,7 @@ import {
   writeLock,
 } from "./lock";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-lock-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-lock-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 let n = 0;
 const freshDir = () => mkdtempSync(join(base, `s${n++}-`));
@@ -35,7 +35,7 @@ function healthServer(sessionId: string) {
   return Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
-    fetch: () => Response.json({ name: "akapen", sessionId }),
+    fetch: () => Response.json({ name: "reviewbuddy", sessionId }),
   });
 }
 

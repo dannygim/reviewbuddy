@@ -12,7 +12,7 @@ import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
 import { TEST_TOKEN, testSession, webView } from "../support";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-prompt-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-prompt-")));
 mkdirSync(join(root, "src"));
 writeFileSync(
   join(root, "src/app.ts"),
@@ -26,7 +26,7 @@ async function comment(line: number, body: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Akapen-Token": TEST_TOKEN,
+      "X-Reviewbuddy-Token": TEST_TOKEN,
     },
     body: JSON.stringify({
       path: "src/app.ts",

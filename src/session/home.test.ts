@@ -3,27 +3,29 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  akapenHome,
+  reviewbuddyHome,
   ensurePrivateDir,
   ensureSessionsDir,
   writePrivateFile,
 } from "./home";
 
-const base = mkdtempSync(join(tmpdir(), "akapen-home-"));
+const base = mkdtempSync(join(tmpdir(), "reviewbuddy-home-"));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 const mode = (path: string) => statSync(path).mode & 0o777;
 
-describe("akapenHome", () => {
-  test("prefers AKAPEN_HOME", () => {
-    expect(akapenHome({ AKAPEN_HOME: "/a", XDG_CONFIG_HOME: "/x" })).toBe("/a");
+describe("reviewbuddyHome", () => {
+  test("prefers REVIEWBUDDY_HOME", () => {
+    expect(
+      reviewbuddyHome({ REVIEWBUDDY_HOME: "/a", XDG_CONFIG_HOME: "/x" }),
+    ).toBe("/a");
   });
 
   test("falls back to XDG_CONFIG_HOME, then ~/.config", () => {
-    expect(akapenHome({ XDG_CONFIG_HOME: "/x" })).toBe("/x/akapen");
-    expect(akapenHome({})).toBe(join(homedir(), ".config", "akapen"));
-    expect(akapenHome({ AKAPEN_HOME: "", XDG_CONFIG_HOME: "" })).toBe(
-      join(homedir(), ".config", "akapen"),
+    expect(reviewbuddyHome({ XDG_CONFIG_HOME: "/x" })).toBe("/x/reviewbuddy");
+    expect(reviewbuddyHome({})).toBe(join(homedir(), ".config", "reviewbuddy"));
+    expect(reviewbuddyHome({ REVIEWBUDDY_HOME: "", XDG_CONFIG_HOME: "" })).toBe(
+      join(homedir(), ".config", "reviewbuddy"),
     );
   });
 });

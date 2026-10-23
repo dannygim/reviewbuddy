@@ -12,7 +12,7 @@ import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
 import { testSession, webView } from "../support";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-comments-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-comments-")));
 mkdirSync(join(root, "src"));
 // Long enough that the composer opening under a line pushes later lines down.
 writeFileSync(

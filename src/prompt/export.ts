@@ -31,7 +31,7 @@ export function findExportSession(
   );
   if (!meta) {
     throw new SessionError(
-      `No active session for ${target.root}. Use --session <id> for an ended one (see akapen session ls).`,
+      `No active session for ${target.root}. Use --session <id> for an ended one (see reviewbuddy session ls).`,
     );
   }
   return meta;

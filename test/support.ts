@@ -11,7 +11,7 @@ export const TEST_TOKEN = "test-token";
 export function testSession(
   options: { readOnly?: boolean } = {},
 ): SessionContext {
-  const dir = mkdtempSync(join(tmpdir(), "akapen-test-session-"));
+  const dir = mkdtempSync(join(tmpdir(), "reviewbuddy-test-session-"));
   return {
     meta: {
       schemaVersion: 1,
@@ -41,11 +41,11 @@ export function testSession(
 }
 
 /**
- * A headless browser view. Set AKAPEN_E2E_BACKEND=chrome to run the E2E tests
+ * A headless browser view. Set REVIEWBUDDY_E2E_BACKEND=chrome to run the E2E tests
  * on Chrome locally, as they run on Linux in CI (macOS defaults to WebKit).
  */
 export function webView(size: { width: number; height: number }): Bun.WebView {
-  const backend = process.env.AKAPEN_E2E_BACKEND as
+  const backend = process.env.REVIEWBUDDY_E2E_BACKEND as
     "chrome" | "webkit" | undefined;
   return new Bun.WebView(backend ? { ...size, backend } : size);
 }

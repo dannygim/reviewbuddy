@@ -38,6 +38,6 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           version="${VERSION#v}"
-          actual="$(mise exec "github:${GITHUB_REPOSITORY}@${version}" -- akapen --version)"
-          echo "akapen --version: $actual"
+          actual="$(mise exec "github:${GITHUB_REPOSITORY}@${version}" -- reviewbuddy --version)"
+          echo "reviewbuddy --version: $actual"
           test "$actual" = "$version"

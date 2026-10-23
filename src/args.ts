@@ -1,9 +1,9 @@
 import { parseArgs } from "node:util";
 
-export const USAGE = `Usage: akapen [dir] [options]
-       akapen export [dir] [--session <id>] [--status open|resolved|all] [--format prompt|jsonl]
-       akapen session ls [--all] | end [dir|id] | reopen <id> | rm <id...> | prune [--dry-run]
-       akapen config init | path | show
+export const USAGE = `Usage: reviewbuddy [dir] [options]
+       reviewbuddy export [dir] [--session <id>] [--status open|resolved|all] [--format prompt|jsonl]
+       reviewbuddy session ls [--all] | end [dir|id] | reopen <id> | rm <id...> | prune [--dry-run]
+       reviewbuddy config init | path | show
 
 Options:
   -p, --port <number>    Port to listen on (default: 4400, or the next free port)
@@ -213,7 +213,7 @@ export function parseCliArgs(argv: string[]): Command {
       return parseSession(argv.slice(1));
     case "config":
       if (argv.length !== 2)
-        throw new UsageError("Expected: akapen config init | path | show");
+        throw new UsageError("Expected: reviewbuddy config init | path | show");
       return {
         kind: "config",
         action: oneOf("config command", argv[1], CONFIG_ACTIONS),

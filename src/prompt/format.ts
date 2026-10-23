@@ -63,7 +63,7 @@ export function formatPrompt(
   return `${options.preamble ? `${options.preamble}\n\n` : ""}${body}\n`;
 }
 
-/** One JSON object per thread, for `akapen export --format jsonl`. */
+/** One JSON object per thread, for `reviewbuddy export --format jsonl`. */
 export function formatJsonl(threads: Thread[]): string {
   return sortThreads(threads)
     .map((t) =>

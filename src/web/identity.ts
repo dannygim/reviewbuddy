@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-const NICKNAME_KEY = "akapen.nickname";
-const CLIENT_ID_KEY = "akapen.clientId";
+const NICKNAME_KEY = "reviewbuddy.nickname";
+const CLIENT_ID_KEY = "reviewbuddy.clientId";
 
 function read(key: string): string | null {
   try {

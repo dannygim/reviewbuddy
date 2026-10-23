@@ -14,7 +14,7 @@ import { startServer } from "../src/server";
 import { testSession } from "../test/support";
 
 const count = Number(Bun.argv[2] ?? 20_000);
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-perf-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-perf-")));
 try {
   for (let i = 0; i < count; i++) {
     const dir = join(root, `d${i % 20}`, `e${i % 25}`, `f${i % 8}`);

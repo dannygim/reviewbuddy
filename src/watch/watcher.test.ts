@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Change, watchRoot } from "./watcher";
 
-const base = realpathSync(mkdtempSync(join(tmpdir(), "akapen-watch-")));
+const base = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-watch-")));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 let stop: (() => void) | undefined;

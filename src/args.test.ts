@@ -136,7 +136,7 @@ describe("parseCliArgs session and config", () => {
     [["session", "reopen"], "Expected one session id"],
     [["session", "rm"], "Expected at least one session id"],
     [["config", "edit"], "Invalid config command: edit"],
-    [["config"], "Expected: akapen config init | path | show"],
+    [["config"], "Expected: reviewbuddy config init | path | show"],
   ])("rejects %p", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(message);
   });

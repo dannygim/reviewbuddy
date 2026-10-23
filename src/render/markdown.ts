@@ -40,7 +40,7 @@ const md = new MarkdownIt({ html: true, linkify: true });
 
 // markdown-it maps are 0-based and end-exclusive, and lists include the blank
 // lines that follow them; convert to 1-based inclusive ranges without those.
-md.core.ruler.push("akapen_source_lines", (state) => {
+md.core.ruler.push("reviewbuddy_source_lines", (state) => {
   const lines = state.src.split("\n");
   for (const token of state.tokens) {
     if (!token.map || !SOURCE_MAPPED.has(token.type)) continue;
@@ -52,7 +52,7 @@ md.core.ruler.push("akapen_source_lines", (state) => {
   }
 });
 
-md.core.ruler.push("akapen_task_lists", (state) => {
+md.core.ruler.push("reviewbuddy_task_lists", (state) => {
   const tokens = state.tokens;
   for (let i = 2; i < tokens.length; i++) {
     const inline = tokens[i]!;

@@ -7,7 +7,7 @@ import { FileIndex } from "./files/file-index";
 import { type AppServer, type SessionContext, startServer } from "./server";
 import type { ServerEvent } from "./shared/events";
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-end-")));
+const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-end-")));
 writeFileSync(join(root, "a.md"), "one\n");
 const index = await FileIndex.create(root);
 const servers: AppServer[] = [];
@@ -37,7 +37,7 @@ function post(server: AppServer, path: string, body: unknown) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Akapen-Token": TEST_TOKEN,
+      "X-Reviewbuddy-Token": TEST_TOKEN,
     },
     body: JSON.stringify(body),
   });
@@ -88,7 +88,7 @@ test("POST /api/session/end makes the session read-only for everyone", async () 
   expect(info).toMatchObject({ status: "ended", readOnly: true });
 });
 
-test("notices a session ended outside the server (akapen session end)", async () => {
+test("notices a session ended outside the server (reviewbuddy session end)", async () => {
   const session = testSession();
   const server = start(session);
   const ended = nextEvent(server, "session.ended");

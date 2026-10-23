@@ -12,11 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// akapen must never write to the reviewed directory (docs/design/要件.md).
+// reviewbuddy must never write to the reviewed directory (docs/design/要件.md).
 const cli = join(import.meta.dir, "..", "src", "cli.ts");
-const base = realpathSync(mkdtempSync(join(tmpdir(), "akapen-readonly-")));
+const base = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-readonly-")));
 const root = join(base, "project");
-const env = { ...process.env, AKAPEN_HOME: join(base, "home") };
+const env = { ...process.env, REVIEWBUDDY_HOME: join(base, "home") };
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 mkdirSync(join(root, "src"), { recursive: true });
@@ -24,7 +24,7 @@ writeFileSync(join(root, "README.md"), "# Project\n\nSome text.\n");
 writeFileSync(join(root, "src/a.ts"), "export const a = 1;\n");
 writeFileSync(join(root, ".gitignore"), "secret.txt\n");
 writeFileSync(join(root, "secret.txt"), "x\n");
-writeFileSync(join(root, ".env"), "AKAPEN_PORT=1\n");
+writeFileSync(join(root, ".env"), "REVIEWBUDDY_PORT=1\n");
 Bun.spawnSync(["git", "init", "-q"], { cwd: root });
 Bun.spawnSync(["git", "add", "README.md", "src", ".gitignore"], { cwd: root });
 
@@ -77,7 +77,7 @@ test("starting, reading, commenting, exporting and ending leave the directory un
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Akapen-Token": token,
+          "X-Reviewbuddy-Token": token,
           Cookie: cookie,
         },
         body: JSON.stringify(body),

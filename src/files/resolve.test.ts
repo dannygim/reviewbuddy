@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { FileIndex } from "./file-index";
 import { resolveFile } from "./resolve";
 
-const base = realpathSync(mkdtempSync(join(tmpdir(), "akapen-resolve-")));
+const base = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-resolve-")));
 const root = join(base, "root");
 mkdirSync(join(root, "doc"), { recursive: true });
 writeFileSync(join(root, "doc/a.md"), "a");
