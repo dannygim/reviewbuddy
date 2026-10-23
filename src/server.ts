@@ -149,7 +149,12 @@ function listen(options: ServerOptions, port: number): AppServer {
   // Keep threads on their lines when files change (docs/design/データモデル.md).
   const reanchorPath = (path: string) => {
     const abs = resolveFile(root, files, path);
-    const lines = abs ? splitLines(readFileSync(abs, "utf8")) : null;
+    let lines: string[] | null = null;
+    try {
+      if (abs) lines = splitLines(readFileSync(abs, "utf8"));
+    } catch {
+      // deleted between the event and now: the threads become outdated
+    }
     for (const thread of session.store.reanchorFile(path, lines)) {
       hub.publish({ type: "thread.updated", thread });
     }
@@ -262,11 +267,16 @@ function listen(options: ServerOptions, port: number): AppServer {
     }
   }
 
-  if (options.watch)
+  if (options.watch) {
     watchRoot(
       root,
       (path) => files.has(path),
-      (c) => void onChange(c),
+      (change) =>
+        onChange(change).catch((error) => {
+          // A failed refresh must not take the server down; the next change retries.
+          console.error("akapen: watching failed:", error);
+        }),
     );
+  }
   return server;
 }

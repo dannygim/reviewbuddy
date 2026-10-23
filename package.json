@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/cli.ts",
-    "build": "bun build src/cli.ts --compile --splitting --minify --sourcemap --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile dist/akapen",
-    "format": "bun fmt src test",
-    "verify": "bun check && bun fmt --check src test && bun test"
+    "build": "bun scripts/build.ts",
+    "format": "bun fmt src test scripts",
+    "verify": "bun check && bun fmt --check src test scripts && bun test"
   },
   "dependencies": {
     "dompurify": "3.4.17",

@@ -115,7 +115,13 @@ function walkFiles(root: string): string[] {
     const abs = join(root, dir);
     const own = readGitignore(join(abs, ".gitignore"));
     const scoped = own ? [...rules, { base: dir, ig: own }] : rules;
-    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+    let entries;
+    try {
+      entries = readdirSync(abs, { withFileTypes: true });
+    } catch {
+      return; // unreadable or gone (e.g. deleted while being watched)
+    }
+    for (const entry of entries) {
       const path = dir ? `${dir}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         if (entry.name !== ".git" && !isIgnored(`${path}/`, scoped))

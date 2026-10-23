@@ -3,7 +3,7 @@
 **目的: `akapen` コマンドの起動方法・サブコマンド・オプション・環境変数・終了コードを定める。**
 
 - 対象の要件: F1 / F12 / F13 ([要件.md](./要件.md))
-- 実装の状態: 起動 (`akapen [dir]`) の `--port` / `--host` / `--version` / `--help` は M0、`--new` / `--session` と多重起動の検知は M3、`akapen export` は M5 で実装済み。それ以外は M6 で実装する
+- 実装の状態: 起動 (`akapen [dir]`) の `--port` / `--host` / `--version` / `--help` は M0、`--new` / `--session` と多重起動の検知は M3、`akapen export` は M5、`session` / `config` サブコマンド・`--open` / `--no-open` / `--no-watch`・環境変数・起動時の自動 prune は M6 で実装済み
 
 ***
 

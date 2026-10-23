@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: ubuntu-latest, target: linux-arm64 }
+          - { os: macos-latest, target: darwin-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: bun install --frozen-lockfile
+      - name: Check that the tag matches package.json
+        run: test "v$(jq -r .version package.json)" = "$GITHUB_REF_NAME"
+      - name: Build
+        run: bun scripts/build.ts --target "bun-${{ matrix.target }}" --outfile build/akapen
+      - name: Sign (ad hoc, with the JIT entitlements Bun recommends)
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --sign - --entitlements packaging/entitlements.plist build/akapen
+          codesign --verify --verbose build/akapen
+      - name: Package
+        run: tar -czf "akapen-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz" -C build akapen
+      - uses: actions/upload-artifact@v7
+        with:
+          name: akapen-${{ matrix.target }}
+          path: akapen-*.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: akapen-*
+          merge-multiple: true
+      - run: sha256sum akapen-*.tar.gz > checksums.txt
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" akapen-*.tar.gz checksums.txt
+          --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+
+  smoke:
+    needs: release
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+      - name: Install with mise and run
+        env:
+          # The repository is private; the workflow token can read its releases.
+          MISE_GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          actual="$(mise exec "github:${GITHUB_REPOSITORY}@${version}" -- akapen --version)"
+          echo "akapen --version: $actual"
+          test "$actual" = "$version"

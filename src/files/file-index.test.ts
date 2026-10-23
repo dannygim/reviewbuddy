@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { FileIndex, listFiles } from "./file-index";
@@ -113,5 +119,21 @@ describe("FileIndex", () => {
     writeFileSync(join(root, "b.md"), "");
     expect(await index.refresh()).toBe(true);
     expect(index.has("b.md")).toBe(true);
+  });
+});
+
+describe("listFiles robustness", () => {
+  test("skips directories it cannot read", async () => {
+    const root = fixture({ "a.md": "", "locked/secret.md": "" });
+    chmodSync(join(root, "locked"), 0o000);
+    try {
+      expect(await listFiles(root)).toEqual(["a.md"]);
+    } finally {
+      chmodSync(join(root, "locked"), 0o755);
+    }
+  });
+
+  test("returns nothing for a root that no longer exists", async () => {
+    expect(await listFiles(join(tmpdir(), "akapen-missing-root"))).toEqual([]);
   });
 });

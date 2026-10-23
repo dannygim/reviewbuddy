@@ -64,17 +64,9 @@ test("a file edit moves its threads and tells the browsers", async () => {
     await Bun.sleep(50);
   }
   ws.close();
-  expect(
-    events.some((e) => e.type === "file.changed" && e.path === "a.md"),
-  ).toBe(true);
-  expect(
-    events.find((e) => e.type === "thread.updated")?.type ===
-      "thread.updated" &&
-      events.some(
-        (e) =>
-          e.type === "thread.updated" &&
-          e.thread.startLine === 3 &&
-          !e.thread.outdated,
-      ),
-  ).toBe(true);
+  expect(events).toContainEqual({ type: "file.changed", path: "a.md" });
+  const moved = events.find(
+    (e) => e.type === "thread.updated" && e.thread.startLine === 3,
+  );
+  expect(moved).toMatchObject({ thread: { endLine: 3, outdated: false } });
 });
