@@ -4,6 +4,7 @@ export const DEFAULT_HOST = "127.0.0.1";
 export const DEFAULT_PORT = 4400;
 
 export const USAGE = `Usage: akapen [dir] [options]
+       akapen export [dir] [--session <id>] [--status open|resolved|all] [--format prompt|jsonl]
 
 Options:
   -p, --port <number>    Port to listen on (default: 4400, or the next free port)
@@ -25,12 +26,69 @@ export type Command =
       /** --session: open this session (its root replaces dir). */
       sessionId?: string;
     }
+  | {
+      kind: "export";
+      dir: string;
+      sessionId?: string;
+      status: ExportStatus;
+      format: ExportFormat;
+    }
   | { kind: "version" }
   | { kind: "help" };
 
+export type ExportStatus = "open" | "resolved" | "all";
+export type ExportFormat = "prompt" | "jsonl";
+const STATUSES: ExportStatus[] = ["open", "resolved", "all"];
+const FORMATS: ExportFormat[] = ["prompt", "jsonl"];
+
 export class UsageError extends Error {}
 
+function oneOf<T extends string>(flag: string, value: string, allowed: T[]): T {
+  if (!allowed.includes(value as T)) {
+    throw new UsageError(
+      `Invalid ${flag}: ${value} (expected ${allowed.join(", ")})`,
+    );
+  }
+  return value as T;
+}
+
+function parseExport(argv: string[]): Command {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args: argv,
+      options: {
+        session: { type: "string" },
+        status: { type: "string" },
+        format: { type: "string" },
+      },
+      allowPositionals: true,
+    });
+  } catch (error) {
+    throw new UsageError((error as Error).message);
+  }
+  const { values, positionals } = parsed;
+  const session = values.session;
+  if (session !== undefined && positionals.length > 0) {
+    throw new UsageError("--session cannot be combined with a directory");
+  }
+  if (positionals.length > 1) {
+    throw new UsageError(
+      `Expected at most one directory, got: ${positionals.join(" ")}`,
+    );
+  }
+  return {
+    kind: "export",
+    dir: positionals[0] ?? ".",
+    ...(session !== undefined && { sessionId: session }),
+    status: oneOf("--status", values.status ?? "open", STATUSES),
+    format: oneOf("--format", values.format ?? "prompt", FORMATS),
+  };
+}
+
 export function parseCliArgs(argv: string[]): Command {
+  // A directory with a subcommand's name can still be opened as ./export.
+  if (argv[0] === "export") return parseExport(argv.slice(1));
   let parsed;
   try {
     parsed = parseArgs({

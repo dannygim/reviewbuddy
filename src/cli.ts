@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { parseCliArgs, UsageError, USAGE } from "./args";
 import { FileIndex } from "./files/file-index";
+import { exportThreads, findExportSession } from "./prompt/export";
 import { DEFAULT_MAX_HIGHLIGHT_BYTES } from "./render/file-view";
 import { openReviewDb } from "./review/db";
 import { ReviewStore } from "./review/store";
@@ -82,6 +83,17 @@ async function run(argv: string[]): Promise<void> {
       return;
     case "serve":
       return serve(command);
+    case "export": {
+      const home = akapenHome();
+      const meta = findExportSession(
+        home,
+        command.sessionId
+          ? { sessionId: command.sessionId }
+          : { root: resolveRoot(command.dir) },
+      );
+      process.stdout.write(exportThreads(home, meta, command));
+      return;
+    }
   }
 }
 

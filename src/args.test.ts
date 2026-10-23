@@ -61,3 +61,47 @@ describe("parseCliArgs", () => {
     expect(() => parseCliArgs(argv)).toThrow(message);
   });
 });
+
+describe("parseCliArgs export", () => {
+  test("defaults to open threads as a prompt for the current directory", () => {
+    expect(parseCliArgs(["export"])).toEqual({
+      kind: "export",
+      dir: ".",
+      status: "open",
+      format: "prompt",
+    });
+  });
+
+  test("takes a directory or a session, a status and a format", () => {
+    expect(
+      parseCliArgs(["export", "proj", "--status", "all", "--format", "jsonl"]),
+    ).toEqual({
+      kind: "export",
+      dir: "proj",
+      status: "all",
+      format: "jsonl",
+    });
+    expect(parseCliArgs(["export", "--session", "s1"])).toMatchObject({
+      kind: "export",
+      sessionId: "s1",
+    });
+  });
+
+  test.each([
+    [["export", "--status", "done"], "Invalid --status: done"],
+    [["export", "--format", "xml"], "Invalid --format: xml"],
+    [
+      ["export", "--session", "s1", "dir"],
+      "--session cannot be combined with a directory",
+    ],
+  ])("rejects %p", (argv, message) => {
+    expect(() => parseCliArgs(argv)).toThrow(message);
+  });
+
+  test("a directory named export can be opened as ./export", () => {
+    expect(parseCliArgs(["./export"])).toMatchObject({
+      kind: "serve",
+      dir: "./export",
+    });
+  });
+});

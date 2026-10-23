@@ -3,7 +3,7 @@
 **目的: `akapen` コマンドの起動方法・サブコマンド・オプション・環境変数・終了コードを定める。**
 
 - 対象の要件: F1 / F12 / F13 ([要件.md](./要件.md))
-- 実装の状態: 起動 (`akapen [dir]`) の `--port` / `--host` / `--version` / `--help` は M0、`--new` / `--session` と多重起動の検知は M3 で実装済み。それ以外は M4〜M6 で実装する
+- 実装の状態: 起動 (`akapen [dir]`) の `--port` / `--host` / `--version` / `--help` は M0、`--new` / `--session` と多重起動の検知は M3、`akapen export` は M5 で実装済み。それ以外は M6 で実装する
 
 ***
 
@@ -44,6 +44,7 @@ akapen config show                 # 反映後の設定値を出す
 
 - 最初の位置引数が `export` / `session` / `config` ならサブコマンドとして扱う
 - 同じ名前のディレクトリを開くときは `akapen ./export` のようにパスとして書く
+- `akapen export` は、`--session` が無ければルートの active なセッションを読む。無ければ終了コード 1 (`akapen: No active session for <root>. ...`)
 
 ### セッションの指定
 
