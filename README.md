@@ -140,6 +140,8 @@ bun run dev       # serve this repository with hot reload
 bun run verify    # type check, format check, tests (including browser tests)
 bun run build     # single binary at dist/akapen
 AKAPEN_E2E_BACKEND=chrome bun test   # run the browser tests on Chrome, as CI does on Linux
+mise run review   # review this repository with the akapen in src/ (arguments after -- go to akapen)
+mise run share    # the same on port 4400, shared with `tailscale serve` on HTTPS port 8443 until Ctrl+C
 ```
 
 Design documents, decisions and plans live in [`docs/`](docs/README.md) (in Japanese).

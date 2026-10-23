@@ -30,3 +30,17 @@ for d in skills/*/; do
 done
 '''
 
+# --- akapen ---
+
+[tasks.review]
+description = "このリポジトリを開発中の akapen (src/cli.ts) で開く。後ろの引数は akapen に渡す (例: mise run review -- --open)"
+run = "bun src/cli.ts ."
+
+[tasks.share]
+description = "このリポジトリを開発中の akapen でポート 4400 で開き、tailscale serve で tailnet に HTTPS の 8443 番で共有する。Ctrl+C で止めると共有も外す"
+run = '''
+tailscale serve --bg --https=8443 4400
+trap 'tailscale serve --https=8443 off' EXIT
+trap 'exit 130' INT TERM
+bun src/cli.ts . --port 4400 "$@"
+'''
