@@ -153,3 +153,54 @@ describe("ReviewStore", () => {
     expectError(() => store.resolve("missing", "Bob"), 404);
   });
 });
+
+describe("reanchorFile", () => {
+  test("updates moved and outdated threads and returns only those", () => {
+    const moved = store.createThread({
+      path: "f.md",
+      startLine: 2,
+      endLine: 2,
+      anchorText: "b",
+      fileSha: "x",
+      originView: "source",
+      body: "on b",
+      ...alice,
+    });
+    const gone = store.createThread({
+      path: "f.md",
+      startLine: 3,
+      endLine: 3,
+      anchorText: "c",
+      fileSha: "x",
+      originView: "source",
+      body: "on c",
+      ...alice,
+    });
+    const same = store.createThread({
+      path: "f.md",
+      startLine: 1,
+      endLine: 1,
+      anchorText: "a",
+      fileSha: "x",
+      originView: "source",
+      body: "on a",
+      ...alice,
+    });
+    const changed = store.reanchorFile("f.md", ["a", "new", "b"]);
+    expect(changed.map((t) => t.id).sort()).toEqual([gone.id, moved.id].sort());
+    expect(store.getThread(moved.id)).toMatchObject({
+      startLine: 3,
+      endLine: 3,
+      outdated: false,
+    });
+    expect(store.getThread(gone.id)).toMatchObject({
+      startLine: 3,
+      outdated: true,
+    });
+    expect(store.getThread(same.id)).toMatchObject({
+      startLine: 1,
+      outdated: false,
+    });
+    expect(store.reanchorFile("f.md", ["a", "new", "b"])).toEqual([]);
+  });
+});

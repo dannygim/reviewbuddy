@@ -1,9 +1,12 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
 import { errorResponse, type Handler } from "./http";
 import { DEFAULT_PROMPT_OPTIONS, type PromptOptions } from "./prompt/format";
 import { Hub, type SocketData } from "./realtime/hub";
 import { isImagePath, renderFile } from "./render/file-view";
+import { splitLines } from "./render/highlight";
 import { type Body, InputError } from "./review/input";
 import { reviewRoutes } from "./review/routes";
 import { ReviewError, type ReviewStore } from "./review/store";
@@ -11,6 +14,7 @@ import { isAllowedHost, isAllowedOrigin } from "./security";
 import type { SessionMeta } from "./session/session";
 import type { Health, SessionInfo, TreeResponse } from "./shared/api";
 import { VERSION } from "./version";
+import { type Change, watchRoot } from "./watch/watcher";
 import index from "./web/index.html";
 
 export type SessionContext = {
@@ -42,6 +46,8 @@ export type ServerOptions = {
   resolveOnCopy?: boolean;
   /** How often to re-read session.json (default 5 s). */
   sessionPollMs?: number;
+  /** Watch the root and push file.changed / tree.changed (default false). */
+  watch?: boolean;
 };
 
 export type AppServer = Bun.Server<SocketData>;
@@ -140,16 +146,25 @@ function listen(options: ServerOptions, port: number): AppServer {
     hub.publish({ type: "session.ended" });
   };
 
-  // `akapen session end` only edits session.json; notice it within seconds.
-  const poll = setInterval(() => {
-    if (session.readOnly) return;
-    const latest = session.reload();
-    if (latest?.status === "ended") {
-      session.meta = latest;
-      markEnded();
+  // Keep threads on their lines when files change (docs/design/データモデル.md).
+  const reanchorPath = (path: string) => {
+    const abs = resolveFile(root, files, path);
+    const lines = abs ? splitLines(readFileSync(abs, "utf8")) : null;
+    for (const thread of session.store.reanchorFile(path, lines)) {
+      hub.publish({ type: "thread.updated", thread });
     }
-  }, options.sessionPollMs ?? 5000);
-  poll.unref();
+  };
+
+  const onChange = async (change: Change) => {
+    const gone = change.files.some((path) => !existsSync(join(root, path)));
+    if ((change.tree || gone) && (await files.refresh())) {
+      hub.publish({ type: "tree.changed" });
+    }
+    for (const path of change.files) {
+      hub.publish({ type: "file.changed", path });
+      if (!session.readOnly) reanchorPath(path);
+    }
+  };
 
   const fileFrom = (req: Request) => {
     const path = new URL(req.url).searchParams.get("path") ?? "";
@@ -226,5 +241,32 @@ function listen(options: ServerOptions, port: number): AppServer {
     websocket: hub.handlers,
   });
   hub.attach(server);
+
+  // Started only once listening succeeded (listen may be retried on another port).
+  // `akapen session end` only edits session.json; notice it within seconds.
+  const poll = setInterval(() => {
+    if (session.readOnly) return;
+    const latest = session.reload();
+    if (latest?.status === "ended") {
+      session.meta = latest;
+      markEnded();
+    }
+  }, options.sessionPollMs ?? 5000);
+  poll.unref();
+
+  if (!session.readOnly) {
+    for (const path of new Set(
+      session.store.listThreads().map((t) => t.path),
+    )) {
+      reanchorPath(path);
+    }
+  }
+
+  if (options.watch)
+    watchRoot(
+      root,
+      (path) => files.has(path),
+      (c) => void onChange(c),
+    );
   return server;
 }

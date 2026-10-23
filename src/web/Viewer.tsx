@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FileView } from "../shared/api";
 import { fetchFile, rawUrl } from "./api";
 import { CodeView } from "./CodeView";
+import { useFileVersion } from "./fileVersions";
 import { MarkdownPreview } from "./MarkdownPreview";
 
 type State = { view: FileView } | { error: string } | null;
@@ -10,10 +11,12 @@ type Mode = "preview" | "source";
 export function Viewer({ path }: { path: string }) {
   const [state, setState] = useState<State>(null);
   const [mode, setMode] = useState<Mode>("preview");
+  const version = useFileVersion(path);
 
+  // Refetches when the file changes on disk; the old content stays until the
+  // new one arrives, so the scroll position is kept.
   useEffect(() => {
     let cancelled = false;
-    setState(null);
     fetchFile(path).then(
       (view) => cancelled || setState({ view }),
       (error: Error) => cancelled || setState({ error: error.message }),
@@ -21,7 +24,7 @@ export function Viewer({ path }: { path: string }) {
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, [path, version]);
 
   const isMarkdown = state && "view" in state && state.view.kind === "markdown";
   return (

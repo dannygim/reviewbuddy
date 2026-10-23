@@ -5,6 +5,7 @@ import { endSession, fetchSession, fetchThreads, fetchTree } from "./api";
 import { type Reviewer, ReviewerContext } from "./context";
 import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree } from "./FileTree";
+import { bumpFileVersion } from "./fileVersions";
 import { clientId, useNickname } from "./identity";
 import { NicknameDialog } from "./NicknameDialog";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
@@ -22,6 +23,7 @@ export function App() {
   const [renaming, setRenaming] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
@@ -56,6 +58,21 @@ export function App() {
         case "thread.deleted":
           threadStore.remove(event.threadId);
           break;
+        case "file.changed": {
+          const { path } = event;
+          bumpFileVersion(path);
+          setChanged((prev) => new Set(prev).add(path));
+          setTimeout(
+            () =>
+              setChanged((prev) => {
+                const next = new Set(prev);
+                next.delete(path);
+                return next;
+              }),
+            3000,
+          );
+          break;
+        }
         case "tree.changed":
           void fetchTree().then((tree) => setFiles(tree.files));
           break;
@@ -170,6 +187,7 @@ export function App() {
                 selected={docPath}
                 badges={openCounts}
                 viewers={viewers}
+                changed={changed}
                 onSelect={openDoc}
               />
             )}

@@ -387,6 +387,16 @@ button:disabled {
   background: var(--selected);
 }
 
+.tree-file.tree-changed {
+  animation: tree-changed 3s ease-out;
+}
+
+@keyframes tree-changed {
+  from {
+    background: var(--line-selected);
+  }
+}
+
 .tree-twisty {
   display: inline-block;
   width: 1.25em;

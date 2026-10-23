@@ -9,11 +9,13 @@ type Props = {
   badges: Map<string, number>;
   /** Nicknames of the other people viewing each file. */
   viewers: Map<string, string[]>;
+  /** Files that just changed on disk (highlighted briefly). */
+  changed: ReadonlySet<string>;
   onSelect: (path: string) => void;
 };
 
 export function FileTree(props: Props) {
-  const { files, selected, badges, viewers, onSelect } = props;
+  const { files, selected, badges, viewers, changed, onSelect } = props;
   const tree = useMemo(() => buildTree(files), [files]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
@@ -45,6 +47,7 @@ export function FileTree(props: Props) {
         selected={selected}
         badges={badges}
         viewers={viewers}
+        changed={changed}
         onToggle={toggle}
         onSelect={onSelect}
       />
@@ -59,12 +62,13 @@ type ListProps = {
   selected: string | null;
   badges: Map<string, number>;
   viewers: Map<string, string[]>;
+  changed: ReadonlySet<string>;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
 };
 
 function TreeList(props: ListProps) {
-  const { nodes, depth, expanded, selected, badges, viewers } = props;
+  const { nodes, depth, expanded, selected, badges, viewers, changed } = props;
   const { onToggle, onSelect } = props;
   const indent = { paddingLeft: `${0.5 + depth}rem` };
   return (
@@ -91,7 +95,9 @@ function TreeList(props: ListProps) {
         ) : (
           <li key={node.path}>
             <button
-              className="tree-file"
+              className={
+                changed.has(node.path) ? "tree-file tree-changed" : "tree-file"
+              }
               data-path={node.path}
               aria-current={node.path === selected ? "page" : undefined}
               style={indent}

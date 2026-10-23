@@ -113,6 +113,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
     prompt: config.prompt,
     resolveOnCopy: config.prompt.resolveOnCopy,
     session,
+    watch: command.watch,
   });
 
   writeLock(dir, {

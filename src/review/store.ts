@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { Comment, Thread } from "../shared/api";
+import { reanchor } from "./reanchor";
 import { ulid } from "./ulid";
 
 export class ReviewError extends Error {
@@ -169,6 +170,35 @@ export class ReviewStore {
     }
     this.db.query("DELETE FROM threads WHERE id = $threadId").run({ threadId });
     return { deletedThreadId: threadId };
+  }
+
+  /**
+   * Re-finds the file's threads in its new lines (null: the file is gone).
+   * Returns the threads whose range or outdated flag changed.
+   */
+  reanchorFile(path: string, lines: string[] | null): Thread[] {
+    const changed: Thread[] = [];
+    for (const thread of this.listThreads(path)) {
+      const next = reanchor(thread, lines);
+      if (
+        next.startLine === thread.startLine &&
+        next.endLine === thread.endLine &&
+        next.outdated === thread.outdated
+      )
+        continue;
+      this.db
+        .query(
+          "UPDATE threads SET start_line = $start, end_line = $end, outdated = $outdated WHERE id = $id",
+        )
+        .run({
+          id: thread.id,
+          start: next.startLine,
+          end: next.endLine,
+          outdated: next.outdated ? 1 : 0,
+        });
+      changed.push(this.getThread(thread.id));
+    }
+    return changed;
   }
 
   /** Records that the threads were copied as a prompt (the "Sent" badge). */
