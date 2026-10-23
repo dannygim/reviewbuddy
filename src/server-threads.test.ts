@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TOKEN, testSession } from "../test/support";
 import { FileIndex } from "./files/file-index";
-import { type SessionContext, startServer } from "./server";
+import { type AppServer, type SessionContext, startServer } from "./server";
 import type { Thread } from "./shared/api";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-threads-")));
@@ -12,7 +12,7 @@ writeFileSync(join(root, "a.md"), "# A\n\none\ntwo\n");
 writeFileSync(join(root, "logo.png"), new Uint8Array([137, 80, 78, 71]));
 const index = await FileIndex.create(root);
 
-const servers: Bun.Server<undefined>[] = [];
+const servers: AppServer[] = [];
 function start(session: SessionContext) {
   const server = startServer({
     root,
@@ -28,7 +28,7 @@ function start(session: SessionContext) {
   return server;
 }
 
-let server: Bun.Server<undefined>;
+let server: AppServer;
 beforeAll(() => {
   server = start(testSession());
 });

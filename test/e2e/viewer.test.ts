@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../../src/files/file-index";
-import { startServer } from "../../src/server";
+import { type AppServer, startServer } from "../../src/server";
 import { testSession } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-e2e-")));
@@ -18,7 +18,7 @@ mkdirSync(join(root, "src"));
 writeFileSync(join(root, "doc/A.md"), "# A\n\nbody\n");
 writeFileSync(join(root, "src/main.ts"), "export const x = 1;\n");
 
-let server: Bun.Server<undefined>;
+let server: AppServer;
 
 beforeAll(async () => {
   server = startServer({

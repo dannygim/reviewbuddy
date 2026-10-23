@@ -1,11 +1,12 @@
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
 import { errorResponse, type Handler } from "./http";
+import { Hub, type SocketData } from "./realtime/hub";
 import { isImagePath, renderFile } from "./render/file-view";
 import { type Body, InputError } from "./review/input";
 import { reviewRoutes } from "./review/routes";
 import { ReviewError, type ReviewStore } from "./review/store";
-import { isAllowedHost } from "./security";
+import { isAllowedHost, isAllowedOrigin } from "./security";
 import type { SessionMeta } from "./session/session";
 import type { Health, SessionInfo, TreeResponse } from "./shared/api";
 import { VERSION } from "./version";
@@ -32,6 +33,8 @@ export type ServerOptions = {
   session: SessionContext;
 };
 
+export type AppServer = Bun.Server<SocketData>;
+
 const PORT_ATTEMPTS = 20;
 const RAW_HEADERS = {
   // A raw SVG opened directly must not run scripts in our origin.
@@ -40,7 +43,7 @@ const RAW_HEADERS = {
   "X-Content-Type-Options": "nosniff",
 };
 
-export function startServer(options: ServerOptions): Bun.Server<undefined> {
+export function startServer(options: ServerOptions): AppServer {
   const attempts = options.strictPort ? 1 : PORT_ATTEMPTS;
   for (let i = 0; ; i++) {
     try {
@@ -55,8 +58,9 @@ export function startServer(options: ServerOptions): Bun.Server<undefined> {
   }
 }
 
-function listen(options: ServerOptions, port: number): Bun.Server<undefined> {
+function listen(options: ServerOptions, port: number): AppServer {
   const { root, index: files, session } = options;
+  const hub = new Hub();
   const health: Health = {
     name: "akapen",
     version: VERSION,
@@ -115,7 +119,7 @@ function listen(options: ServerOptions, port: number): Bun.Server<undefined> {
     return { path, abs: resolveFile(root, files, path) };
   };
 
-  return Bun.serve({
+  const server = Bun.serve({
     hostname: options.host,
     port,
     // `bun build --compile` implies --production, which inlines NODE_ENV=production.
@@ -151,8 +155,39 @@ function listen(options: ServerOptions, port: number): Bun.Server<undefined> {
           return errorResponse(404, "File not found");
         return new Response(Bun.file(abs), { headers: RAW_HEADERS });
       }),
-      ...reviewRoutes({ root, files, store: session.store, guard, write }),
+      ...reviewRoutes({
+        root,
+        files,
+        store: session.store,
+        guard,
+        write,
+        publish: (event) => hub.publish(event),
+      }),
     },
-    fetch: guard(() => errorResponse(404, "Not found")),
+    fetch(req, server) {
+      if (!isAllowedHost(req.headers.get("host"), options.allowedHosts)) {
+        return errorResponse(403, "Host not allowed");
+      }
+      const url = new URL(req.url);
+      if (url.pathname !== "/ws") return errorResponse(404, "Not found");
+      // Same rules as writes: the token proves the page is ours.
+      if (url.searchParams.get("token") !== session.token) {
+        return errorResponse(403, "Missing or invalid token");
+      }
+      if (
+        !isAllowedOrigin(req.headers.get("origin"), req.headers.get("host"))
+      ) {
+        return errorResponse(403, "Origin not allowed");
+      }
+      const data: SocketData = { clientId: null, nickname: null, path: null };
+      if (server.upgrade(req, { data })) {
+        session.touch();
+        return undefined;
+      }
+      return errorResponse(400, "Expected a WebSocket upgrade");
+    },
+    websocket: hub.handlers,
   });
+  hub.attach(server);
+  return server;
 }

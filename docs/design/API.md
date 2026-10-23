@@ -52,8 +52,7 @@
 | `type` | いつ | 内容 |
 |--------|------|------|
 | `presence.changed` | 接続・切断・`view` の変更 | 参加者 (Nickname、`client_id`、開いているファイル) の一覧 |
-| `thread.created` / `thread.updated` / `thread.deleted` | スレッドの作成・Resolve / Reopen・再アンカー・送信済みの記録・削除 | スレッド (コメントを含む) か、その ID |
-| `comment.created` / `comment.updated` / `comment.deleted` | コメントの追加・編集・削除 | コメントか、その ID |
+| `thread.created` / `thread.updated` / `thread.deleted` | スレッドの作成・コメントの追加 / 編集 / 削除・Resolve / Reopen・再アンカー・送信済みの記録・スレッドの削除 | スレッド (コメントを含む) か、その ID。コメントの変更もスレッド全体で送る (REST の応答と同じ形にして、クライアントの処理を 1 種類にするため) |
 | `file.changed` | 一覧に含まれるファイルの変更 | パス |
 | `tree.changed` | ファイルの追加・削除 | — (クライアントは `GET /api/tree` で取り直す) |
 | `session.ended` | セッションの終了 | — (クライアントは read-only のバナーを出す) |

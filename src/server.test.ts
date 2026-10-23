@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { testSession } from "../test/support";
 import { FileIndex } from "./files/file-index";
-import { startServer } from "./server";
+import { type AppServer, startServer } from "./server";
 import { VERSION } from "./version";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-server-")));
@@ -19,7 +19,7 @@ const index = await FileIndex.create(root);
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-const servers: Bun.Server<undefined>[] = [];
+const servers: AppServer[] = [];
 function start(port: number, strictPort: boolean) {
   const server = startServer({
     root,

@@ -2,6 +2,8 @@ import type { FileIndex } from "../files/file-index";
 import { resolveFile } from "../files/resolve";
 import { type Handler, param } from "../http";
 import { isImagePath } from "../render/file-view";
+import type { Thread } from "../shared/api";
+import type { ServerEvent } from "../shared/events";
 import { anchorFor } from "./anchor";
 import { type Body, InputError, integer, oneOf, text } from "./input";
 import type { ReviewStore } from "./store";
@@ -26,8 +28,14 @@ export function reviewRoutes(deps: {
   store: ReviewStore;
   guard: (handler: Handler) => Handler;
   write: (handler: WriteHandler) => Handler;
+  /** Broadcasts a change to every connected browser. */
+  publish: (event: ServerEvent) => void;
 }) {
-  const { root, files, store, guard, write } = deps;
+  const { root, files, store, guard, write, publish } = deps;
+  const updated = (thread: Thread, status = 200) => {
+    publish({ type: "thread.updated", thread });
+    return Response.json(thread, { status });
+  };
   return {
     "/api/threads": {
       GET: guard((req) => {
@@ -62,19 +70,18 @@ export function reviewRoutes(deps: {
           originView: oneOf(body, "originView", ORIGIN_VIEWS),
           ...comment(body),
         });
+        publish({ type: "thread.created", thread });
         return Response.json(thread, { status: 201 });
       }),
     },
     "/api/threads/:id/comments": {
       POST: write((req, body) =>
-        Response.json(store.addComment(param(req, "id"), comment(body)), {
-          status: 201,
-        }),
+        updated(store.addComment(param(req, "id"), comment(body)), 201),
       ),
     },
     "/api/comments/:id": {
       PATCH: write((req, body) =>
-        Response.json(
+        updated(
           store.editComment(
             param(req, "id"),
             text(body, "clientId", MAX_CLIENT_ID),
@@ -82,24 +89,28 @@ export function reviewRoutes(deps: {
           ),
         ),
       ),
-      DELETE: write((req, body) =>
-        Response.json(
-          store.deleteComment(
-            param(req, "id"),
-            text(body, "clientId", MAX_CLIENT_ID),
-          ),
-        ),
-      ),
+      DELETE: write((req, body) => {
+        const result = store.deleteComment(
+          param(req, "id"),
+          text(body, "clientId", MAX_CLIENT_ID),
+        );
+        publish(
+          "thread" in result
+            ? { type: "thread.updated", thread: result.thread }
+            : { type: "thread.deleted", threadId: result.deletedThreadId },
+        );
+        return Response.json(result);
+      }),
     },
     "/api/threads/:id/resolve": {
       POST: write((req, body) =>
-        Response.json(
+        updated(
           store.resolve(param(req, "id"), text(body, "author", MAX_AUTHOR)),
         ),
       ),
     },
     "/api/threads/:id/reopen": {
-      POST: write((req) => Response.json(store.reopen(param(req, "id")))),
+      POST: write((req) => updated(store.reopen(param(req, "id")))),
     },
   };
 }
