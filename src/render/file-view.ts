@@ -6,6 +6,8 @@ import { detectLanguage } from "./language";
 
 export type RenderOptions = { maxHighlightBytes: number };
 
+export const DEFAULT_MAX_HIGHLIGHT_BYTES = 2_000_000;
+
 const IMAGE_EXTENSIONS = new Set([
   "png",
   "jpg",

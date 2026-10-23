@@ -1,9 +1,11 @@
 import { parseCliArgs, UsageError, USAGE } from "./args";
+import { FileIndex } from "./files/file-index";
+import { DEFAULT_MAX_HIGHLIGHT_BYTES } from "./render/file-view";
 import { resolveRoot } from "./root";
 import { startServer } from "./server";
 import { VERSION } from "./version";
 
-function run(argv: string[]): void {
+async function run(argv: string[]): Promise<void> {
   const command = parseCliArgs(argv);
   switch (command.kind) {
     case "help":
@@ -14,7 +16,14 @@ function run(argv: string[]): void {
       return;
     case "serve": {
       const root = resolveRoot(command.dir);
-      const server = startServer({ ...command, root });
+      const index = await FileIndex.create(root);
+      const server = startServer({
+        ...command,
+        root,
+        index,
+        allowedHosts: [],
+        maxHighlightBytes: DEFAULT_MAX_HIGHLIGHT_BYTES,
+      });
       console.log(`akapen ${VERSION} is reviewing ${root}`);
       console.log(`  ${server.url}`);
       return;
@@ -22,9 +31,8 @@ function run(argv: string[]): void {
   }
 }
 
-try {
-  run(Bun.argv.slice(2));
-} catch (error) {
+// No top-level await: `--bytecode` builds a CommonJS bundle.
+run(Bun.argv.slice(2)).catch((error) => {
   if (error instanceof UsageError) {
     console.error(`akapen: ${error.message}\n\n${USAGE}`);
     process.exitCode = 2;
@@ -32,6 +40,7 @@ try {
     console.error(`akapen: ${(error as Error).message}`);
     process.exitCode = 1;
   } else {
-    throw error;
+    console.error(error);
+    process.exitCode = 1;
   }
-}
+});

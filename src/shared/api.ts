@@ -1,5 +1,9 @@
 export type Health = { name: "akapen"; version: string; root: string };
 
+export type TreeResponse = { files: string[] };
+
+export type ErrorResponse = { error: string };
+
 export type TextFileView = {
   kind: "code" | "markdown" | "large";
   path: string;
