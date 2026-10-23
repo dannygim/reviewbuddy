@@ -38,9 +38,16 @@ run = "bun src/cli.ts ."
 
 [tasks.share]
 description = "このリポジトリを開発中の reviewbuddy でポート 4400 で開き、tailscale serve で tailnet に HTTPS の 8443 番で共有する。Ctrl+C で止めると共有も外す"
+# Checked first: if reviewbuddy then failed to start, the EXIT trap would take
+# down the share of the one already running. mise appends task arguments to the
+# last line, so it must stay the reviewbuddy command.
 run = '''
+if nc -z 127.0.0.1 4400 2>/dev/null; then
+  echo "Port 4400 is already in use (another reviewbuddy?)." >&2
+  exit 1
+fi
 tailscale serve --bg --https=8443 4400
 trap 'tailscale serve --https=8443 off' EXIT
 trap 'exit 130' INT TERM
-bun src/cli.ts . --port 4400 "$@"
+bun src/cli.ts . --port 4400
 '''
