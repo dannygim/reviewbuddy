@@ -43,6 +43,12 @@
 - mise はダウンロードしたアセットの GitHub artifact attestation を API で確かめる。GitHub Actions のワークフローのトークンで入れる場合は、`attestations: read` の権限が無いと 403 で失敗する。権限を付ければ、attestation の無い private リポジトリの Release でも入る **確認済** (v0.1.0 のスモークテストで実行)
 - GitHub Actions では、別のリポジトリの private なツールを入れるのに GitHub App のトークンか PAT が必要 **確認済**
 - `mise lock` は API 呼び出しを減らすが、private な成果物を公開するものではない **確認済**
+
+### 公開直後のリリース (`minimum_release_age`)
+
+- mise 2026.10 の `minimum_release_age` は既定で `24h`。公開から 24 時間たっていない版は、`latest` や `0.1` のような範囲の指定を解決するときに飛ばされる。`mise upgrade` は「no versions found ... matching minimum_release_age (24h)」と警告して何もしない **確認済** (2026-10-23、mise 2026.10.17。v0.1.1 の公開直後に発生)
+- `@0.1.1` のように版を明示した場合は対象外 (リリースのスモークテストが通ったのはこのため) **確認済**
+- その場で上げるには `mise upgrade <tool> --minimum-release-age 0s`、特定のツールを外すには `minimum_release_age_excludes` に完全なバックエンド ID (`github:dannygim/akapen`) を足す (`mise settings add minimum_release_age_excludes github:dannygim/akapen`) **確認済** (前者は実行、後者はドキュメント)
 - GitHub の artifact attestation は、Free / Pro / Team では public リポジトリのみ。private / internal は GitHub Enterprise Cloud が必要 **確認済** (GitHub Docs)
 
 ### 未確認の事項
@@ -61,6 +67,7 @@
 - **private のままでも自分は使える**。gh で `gh auth login` 済みなら、mise は gh の `hosts.yml` を読む。ただし期限切れの `GITHUB_TOKEN` などが環境変数に残っていると、先にそちらが使われて失敗する
 - **private の間は artifact attestation を付けられない** (GitHub Enterprise Cloud が必要)。checksum の検証は効く
 - **packslip を足すと registry の Tier 1 になる**が、private で動くかは未確認。public にしてから導入する
+- **新しいリリースは、利用者の `mise upgrade` には 24 時間後に出てくる** (mise の `minimum_release_age` の既定値)。急ぐときの手順を README に書く
 
 ***
 
@@ -83,5 +90,7 @@
 > 出典: [packslip](https://packslip.dev) (確認日: 2026-10-23)
 
 > 出典: [mise — GitHub tokens](https://mise.jdx.dev/dev-tools/github-tokens.html) (確認日: 2026-10-23)
+
+> 出典: [mise — Settings: minimum_release_age / minimum_release_age_excludes](https://mise.jdx.dev/configuration/settings.html#minimum_release_age) (確認日: 2026-10-23)
 
 > 出典: [GitHub Docs — Using artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations) (確認日: 2026-10-23)

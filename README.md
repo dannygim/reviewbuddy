@@ -21,6 +21,14 @@ akapen --version
 
 Binaries are built for macOS (Apple silicon) and Linux (x64, arm64).
 
+mise holds back releases younger than 24 hours by default (`minimum_release_age`), so `mise upgrade` only offers a new akapen release the day after it is published. To take it right away:
+
+```sh
+mise upgrade github:dannygim/akapen --minimum-release-age 0s
+# or exempt akapen from the delay for good:
+mise settings add minimum_release_age_excludes github:dannygim/akapen
+```
+
 While the repository is private, mise needs a GitHub token that can read it. If you use the GitHub CLI, let mise ask it for one:
 
 ```sh
