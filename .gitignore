@@ -1,0 +1,36 @@
+.DS_Store
+secret*
+node_modules/
+gen/
+_gen/
+dist/
+temp/
+.volumes
+.next
+.env
+.env.*
+!.env.example
+!.env.datasync.example
+*.local
+
+# Claude Code
+.claude/settings.*
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# AI Agents
+.gemini/
+.opencode/
+.ocx/
+.agents/
+.agent/
+.claude/skills/
+.github/skills
+.sisyphus/
+.antigravitycli/
+worktrees/
+
+# Per-developer mise overrides
+mise.local.toml
+
+coverage.out
