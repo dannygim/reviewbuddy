@@ -39,14 +39,16 @@
 - トークンの探索順 (最初に見つかったものだけを使う): `MISE_GITHUB_ENTERPRISE_TOKEN` (github.com 以外のホスト) → `MISE_GITHUB_TOKEN` → `GITHUB_API_TOKEN` → `GITHUB_TOKEN` → `github.credential_command` (例: `gh auth token --hostname "$MISE_CREDENTIAL_HOST"`) → ネイティブ OAuth → `github_tokens.toml` → gh の `hosts.yml` (gh は実行しない) → `git credential fill` (`use_git_credentials` が有効なときのみ)。`GH_TOKEN` は読まない **確認済**
 - 権限: fine-grained PAT で Release のアセットを落とすには Contents: read が必要 **確認済**
 - `mise token github` は、使われるトークンの出どころをマスク付きで表示する (トークンの供給源ではない) **確認済**
+- gh がトークンを macOS のキーチェーンに保存している場合 (`gh auth status` に `(keyring)` と出る)、gh の `hosts.yml` にトークンは無く、mise は gh の認証を使えない (`mise token github` が `(none)`)。`github.credential_command` に `gh auth token --hostname "$MISE_CREDENTIAL_HOST"` を設定すると使える (`source: credential_command`) **確認済** (2026-10-23 に実行)
+- mise はダウンロードしたアセットの GitHub artifact attestation を API で確かめる。GitHub Actions のワークフローのトークンで入れる場合は、`attestations: read` の権限が無いと 403 で失敗する。権限を付ければ、attestation の無い private リポジトリの Release でも入る **確認済** (v0.1.0 のスモークテストで実行)
 - GitHub Actions では、別のリポジトリの private なツールを入れるのに GitHub App のトークンか PAT が必要 **確認済**
 - `mise lock` は API 呼び出しを減らすが、private な成果物を公開するものではない **確認済**
 - GitHub の artifact attestation は、Free / Pro / Team では public リポジトリのみ。private / internal は GitHub Enterprise Cloud が必要 **確認済** (GitHub Docs)
 
 ### 未確認の事項
 
-- アセット名 `akapen-v0.1.0-darwin-arm64.tar.gz` / `-linux-x64.tar.gz` で、mise の自動判定が正しく選ぶか (最初のリリースで `mise use` して確認する) **要検証**
-- mise (HTTP クライアント) でダウンロードしたバイナリに quarantine 属性が付かず、Gatekeeper の警告が出ないか **要検証**
+- アセット名 `akapen-v0.1.0-darwin-arm64.tar.gz` / `-linux-x64.tar.gz` で、mise の自動判定が正しく選ぶか → **確認済** (v0.1.0 で、macOS は `darwin-arm64`、Linux は `linux-x64` を選んだ)
+- mise (HTTP クライアント) でダウンロードしたバイナリに quarantine 属性が付かず、Gatekeeper の警告が出ないか → **確認済** (v0.1.0。`com.apple.quarantine` は付かず、ad-hoc 署名のまま実行できる)
 - packslip の GitHub Action に必要な `permissions` (`id-token: write` など) **要検証**
 - aqua registry への新規追加の条件と手順 **要検証**
 

@@ -21,7 +21,13 @@ akapen --version
 
 Binaries are built for macOS (Apple silicon) and Linux (x64, arm64).
 
-While the repository is private, mise needs a GitHub token that can read it. If you use the GitHub CLI, `gh auth login` is enough (mise reads gh's credentials). Otherwise set `MISE_GITHUB_TOKEN` to a fine-grained token with read access to the repository's contents. `mise token github` shows which token mise will use. People who only open akapen in a browser need nothing.
+While the repository is private, mise needs a GitHub token that can read it. If you use the GitHub CLI, let mise ask it for one:
+
+```sh
+mise settings set github.credential_command 'gh auth token --hostname "$MISE_CREDENTIAL_HOST"'
+```
+
+(gh usually keeps its token in the macOS keychain, where mise cannot read it directly.) Alternatively, set `MISE_GITHUB_TOKEN` to a fine-grained token with read access to the repository's contents. `mise token github` shows which token mise will use. People who only open akapen in a browser need nothing.
 
 ## Use
 
