@@ -1,4 +1,18 @@
-export type Health = { name: "akapen"; version: string; root: string };
+export type Health = {
+  name: "akapen";
+  version: string;
+  root: string;
+  sessionId: string;
+};
+
+export type SessionInfo = {
+  id: string;
+  root: string;
+  status: "active" | "ended";
+  readOnly: boolean;
+  /** Send as X-Akapen-Token on writes. */
+  token: string;
+};
 
 export type TreeResponse = { files: string[] };
 

@@ -8,6 +8,8 @@ export const USAGE = `Usage: akapen [dir] [options]
 Options:
   -p, --port <number>    Port to listen on (default: 4400, or the next free port)
   -H, --host <address>   Address to bind (default: 127.0.0.1)
+      --new              End this directory's active session and start a new one
+      --session <id>     Open a session by id (read-only once it has ended)
   -v, --version          Print the version
   -h, --help             Print this help`;
 
@@ -18,6 +20,10 @@ export type Command =
       host: string;
       port: number;
       strictPort: boolean;
+      /** --new: end the active session and start a new one. */
+      fresh: boolean;
+      /** --session: open this session (its root replaces dir). */
+      sessionId?: string;
     }
   | { kind: "version" }
   | { kind: "help" };
@@ -32,6 +38,8 @@ export function parseCliArgs(argv: string[]): Command {
       options: {
         port: { type: "string", short: "p" },
         host: { type: "string", short: "H" },
+        new: { type: "boolean" },
+        session: { type: "string" },
         version: { type: "boolean", short: "v" },
         help: { type: "boolean", short: "h" },
       },
@@ -44,6 +52,12 @@ export function parseCliArgs(argv: string[]): Command {
 
   if (values.help) return { kind: "help" };
   if (values.version) return { kind: "version" };
+  if (values.session !== undefined && positionals.length > 0) {
+    throw new UsageError("--session cannot be combined with a directory");
+  }
+  if (values.session !== undefined && values.new) {
+    throw new UsageError("--session cannot be combined with --new");
+  }
   if (positionals.length > 1) {
     throw new UsageError(
       `Expected at most one directory, got: ${positionals.join(" ")}`,
@@ -56,6 +70,8 @@ export function parseCliArgs(argv: string[]): Command {
     port: values.port === undefined ? DEFAULT_PORT : parsePort(values.port),
     // A port given explicitly must not silently move (e.g. `tailscale serve 4400` proxies to it).
     strictPort: values.port !== undefined,
+    fresh: values.new ?? false,
+    sessionId: values.session,
   };
 }
 

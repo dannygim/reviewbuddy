@@ -9,6 +9,7 @@ describe("parseCliArgs", () => {
       host: DEFAULT_HOST,
       port: DEFAULT_PORT,
       strictPort: false,
+      fresh: false,
     });
   });
 
@@ -19,6 +20,21 @@ describe("parseCliArgs", () => {
       host: "0.0.0.0",
       port: 5000,
       strictPort: true,
+      fresh: false,
+    });
+  });
+
+  test("--new starts a fresh session", () => {
+    expect(parseCliArgs(["--new"])).toMatchObject({
+      kind: "serve",
+      fresh: true,
+    });
+  });
+
+  test("--session opens a session by id", () => {
+    expect(parseCliArgs(["--session", "20261023-1530-p-3f9a"])).toMatchObject({
+      kind: "serve",
+      sessionId: "20261023-1530-p-3f9a",
     });
   });
 
@@ -35,6 +51,11 @@ describe("parseCliArgs", () => {
     [["--port", "70000"], "Invalid port: 70000"],
     [["--nope"], "Unknown option"],
     [["a", "b"], "Expected at most one directory"],
+    [
+      ["--session", "x", "dir"],
+      "--session cannot be combined with a directory",
+    ],
+    [["--session", "x", "--new"], "--session cannot be combined with --new"],
   ])("rejects %p", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);
     expect(() => parseCliArgs(argv)).toThrow(message);

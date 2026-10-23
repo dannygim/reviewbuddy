@@ -2,6 +2,7 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { testSession } from "../test/support";
 import { FileIndex } from "./files/file-index";
 import { startServer } from "./server";
 import { VERSION } from "./version";
@@ -28,6 +29,7 @@ function start(port: number, strictPort: boolean) {
     index,
     allowedHosts: [],
     maxHighlightBytes: 2_000_000,
+    session: testSession(),
   });
   servers.push(server);
   return server;
@@ -50,6 +52,7 @@ describe("startServer", () => {
       name: "akapen",
       version: VERSION,
       root,
+      sessionId: testSession().meta.id,
     });
   });
 

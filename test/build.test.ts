@@ -22,7 +22,11 @@ beforeAll(async () => {
   });
   expect(build.exitCode, build.stderr.toString()).toBe(0);
 
-  proc = Bun.spawn([binary, root], { stdout: "pipe" });
+  proc = Bun.spawn([binary, root], {
+    stdout: "pipe",
+    // Keep sessions out of the real ~/.config/akapen.
+    env: { ...process.env, AKAPEN_HOME: join(root, ".akapen-home") },
+  });
   let output = "";
   for await (const chunk of proc.stdout) {
     output += new TextDecoder().decode(chunk);

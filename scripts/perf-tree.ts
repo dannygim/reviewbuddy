@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../src/files/file-index";
 import { startServer } from "../src/server";
+import { testSession } from "../test/support";
 
 const count = Number(Bun.argv[2] ?? 20_000);
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-perf-")));
@@ -35,6 +36,7 @@ try {
     index,
     allowedHosts: [],
     maxHighlightBytes: 2_000_000,
+    session: testSession(),
   });
   start = performance.now();
   const body = await (await fetch(new URL("/api/tree", server.url))).text();
