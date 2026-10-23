@@ -1,0 +1,32 @@
+[settings]
+npm.package_manager = "bun"
+
+[shell_alias]
+npx = "bunx"
+
+[tools]
+bun = "latest"
+
+# --- Agent Skills ---
+
+[tasks."skills:sync"]
+description = "Agent Skill を skills-lock.json と完全同期 (lock に無いスキルは削除)。.agents/skills に実体を置き、.claude/skills から symlink する。リポジトリ内の skills/* もリンクする"
+run = '''
+rm -rf .agents/skills .claude/skills
+bunx skills experimental_install
+mkdir -p .claude/skills
+for d in .agents/skills/*/; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    ln -s "../../.agents/skills/$name" ".claude/skills/$name"
+done
+
+# リポジトリ内の skills/* (このリポジトリ専用のスキル) もリンクする
+for d in skills/*/; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    ln -s "../../skills/$name" ".agents/skills/$name"
+    ln -s "../../skills/$name" ".claude/skills/$name"
+done
+'''
+

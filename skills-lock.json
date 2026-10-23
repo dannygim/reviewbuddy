@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "skills": {
+    "architecture": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/architecture/SKILL.md",
+      "computedHash": "0220c55f7be41d5ac6e622510b3367e7ad023cbcd9b804a43ede7db82185eafb"
+    },
+    "architecture-designer": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/architecture-designer/SKILL.md",
+      "computedHash": "823a70de029953659315b8ab2033e59983a8b49915e9054fec3b75fc5848306b"
+    },
+    "code-review": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/code-review/SKILL.md",
+      "computedHash": "919719020590499db120437b53defa7dcb05e138aa5ce9e55034b88dbad7fff8"
+    },
+    "debug": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/debug/SKILL.md",
+      "computedHash": "2406a53ec026e905f3edabfee71004ac480649c6d153ac0d09472eaf79028996"
+    },
+    "deploy-checklist": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/deploy-checklist/SKILL.md",
+      "computedHash": "7d123150a37b0010cf7158de6ddd64863ec64e7af08ed4e58a54decca9911006"
+    },
+    "documentation": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/documentation/SKILL.md",
+      "computedHash": "c24a1672a7edad51225859d6549d9a61892f704a4527a65ce3cddd913ca04550"
+    },
+    "runbook": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "operations/skills/runbook/SKILL.md",
+      "computedHash": "f23987e7c978f2b08ebcba07401ae46e616cfbb186b56c0f412b82987874268a"
+    },
+    "system-design": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/system-design/SKILL.md",
+      "computedHash": "5915b5f79ae74f20473c4922075b091f290374d26b26c927af9c767102424ac4"
+    },
+    "task-management": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "productivity/skills/task-management/SKILL.md",
+      "computedHash": "a1f9389c1f06bb9c630001875e0801eb209b08818ba217f0114bc62d149eb056"
+    },
+    "tech-debt": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/tech-debt/SKILL.md",
+      "computedHash": "3f0795a17cd18ea117f41bcfb8fef66fa17b1a00a2c1a0a7f134e090f0dcdb92"
+    },
+    "testing-strategy": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/testing-strategy/SKILL.md",
+      "computedHash": "2fe64e97a596e862cd946bb8cddbbf4e9f1e1f21ca817f586111a25af474d0f8"
+    }
+  }
+}
