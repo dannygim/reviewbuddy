@@ -85,7 +85,7 @@ test("renders the preview with source line ranges", async () => {
   expect(await q("li.task-list-item input[type=checkbox][checked]")).toBe(true);
   expect(await q('tr[data-src-start="8"]')).toBe(true);
   expect(await q('pre.code-block span[style*="--shiki-dark"]')).toBe(true);
-  await waitFor(view, `!!document.querySelector(".mermaid svg")`);
+  await waitFor(view, `!!document.querySelector(".mermaid svg .node")`);
 }, 30_000);
 
 test("does not run scripts from the Markdown", async () => {
@@ -102,6 +102,8 @@ test("switches to the source view", async () => {
 
 test("follows relative links to other files", async () => {
   await using view = await open("doc/guide.md");
+  // The diagram above the link shifts the layout when it renders.
+  await waitFor(view, `!!document.querySelector(".mermaid svg .node")`);
   await view.click('a[href="#/doc/doc/other.md"]');
   await waitFor(
     view,

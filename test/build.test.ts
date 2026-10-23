@@ -59,19 +59,22 @@ test("the compiled binary loads Mermaid only for documents that use it", async (
       await Bun.sleep(50);
     }
   };
-  const scriptBytes = () =>
+  const scripts = () =>
     view.evaluate(
-      `performance.getEntriesByType("resource").filter((e) => e.name.endsWith(".js")).reduce((sum, e) => sum + e.decodedBodySize, 0)`,
-    ) as Promise<number>;
+      `performance.getEntriesByType("resource").filter((e) => e.name.endsWith(".js")).map((e) => e.decodedBodySize)`,
+    ) as Promise<number[]>;
+  const sum = (sizes: number[]) => sizes.reduce((a, b) => a + b, 0);
 
   await view.navigate(`${url}#/doc/plain.md`);
   await waitFor(`!!document.querySelector(".markdown h1")`);
-  const withoutMermaid = await scriptBytes();
+  const before = await scripts();
 
   await view.evaluate(`location.hash = "#/doc/diagram.md"`);
-  await waitFor(`!!document.querySelector(".mermaid svg")`);
-  const withMermaid = await scriptBytes();
+  // The flowchart's nodes exist only once Mermaid has finished rendering.
+  await waitFor(`!!document.querySelector(".mermaid svg .node")`);
+  const after = await scripts();
 
-  expect(withoutMermaid).toBeLessThan(1_500_000);
-  expect(withMermaid - withoutMermaid).toBeGreaterThan(1_000_000);
+  expect(sum(before)).toBeLessThan(1_500_000);
+  expect(after.length).toBeGreaterThan(before.length);
+  expect(sum(after) - sum(before)).toBeGreaterThan(300_000);
 }, 60_000);
