@@ -29,7 +29,7 @@ beforeAll(async () => {
     index: await FileIndex.create(root),
     allowedHosts: [],
     maxHighlightBytes: 2_000_000,
-    session: testSession(),
+    session: testSession({ readOnly: true }),
   });
 });
 
@@ -52,7 +52,10 @@ test("opens a file from the tree and reflects it in the URL", async () => {
   await view.navigate(server.url.href);
   await view.click('[data-path="src"]');
   await view.click('[data-path="src/main.ts"]');
-  await waitFor(view, `document.querySelectorAll(".code tr").length === 1`);
+  await waitFor(
+    view,
+    `document.querySelectorAll(".code tr[data-line]").length === 1`,
+  );
   expect(await view.evaluate("location.hash")).toBe("#/doc/src/main.ts");
   expect(
     await view.evaluate(`document.querySelector(".code-src").textContent`),

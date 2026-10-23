@@ -4,10 +4,12 @@ import { buildTree, type TreeNode } from "../shared/tree";
 type Props = {
   files: string[];
   selected: string | null;
+  /** Number of open threads per file. */
+  badges: Map<string, number>;
   onSelect: (path: string) => void;
 };
 
-export function FileTree({ files, selected, onSelect }: Props) {
+export function FileTree({ files, selected, badges, onSelect }: Props) {
   const tree = useMemo(() => buildTree(files), [files]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
@@ -37,6 +39,7 @@ export function FileTree({ files, selected, onSelect }: Props) {
         depth={0}
         expanded={expanded}
         selected={selected}
+        badges={badges}
         onToggle={toggle}
         onSelect={onSelect}
       />
@@ -49,12 +52,14 @@ type ListProps = {
   depth: number;
   expanded: Set<string>;
   selected: string | null;
+  badges: Map<string, number>;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
 };
 
 function TreeList(props: ListProps) {
-  const { nodes, depth, expanded, selected, onToggle, onSelect } = props;
+  const { nodes, depth, expanded, selected, badges, onToggle, onSelect } =
+    props;
   const indent = { paddingLeft: `${0.5 + depth}rem` };
   return (
     <ul>
@@ -88,6 +93,11 @@ function TreeList(props: ListProps) {
             >
               <span className="tree-twisty" />
               {node.name}
+              {badges.get(node.path) ? (
+                <span className="tree-badge" title="Open threads">
+                  {badges.get(node.path)}
+                </span>
+              ) : null}
             </button>
           </li>
         ),

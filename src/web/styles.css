@@ -10,6 +10,8 @@
   --code-bg: #f6f8fa;
   --link: #0969da;
   --danger: #d1242f;
+  --line-selected: #fff8c5;
+  --accent: #0969da;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +25,8 @@
     --code-bg: #151b23;
     --link: #4493f8;
     --danger: #f85149;
+    --line-selected: #3b2e0a;
+    --accent: #4493f8;
   }
 }
 
@@ -39,14 +43,19 @@ body {
 }
 
 .app {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
+.app-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  min-height: 0;
+}
+
 .app-header {
-  grid-column: 1 / -1;
   display: flex;
   gap: 1rem;
   align-items: baseline;
@@ -57,6 +66,117 @@ body {
 .app-root {
   color: var(--muted);
   font-size: 0.875rem;
+}
+
+.app-spacer {
+  flex: 1;
+}
+
+.app-me {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.banner {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--line-selected);
+  font-size: 0.875rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+button {
+  font: inherit;
+}
+
+button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.tree-badge {
+  margin-left: 0.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.75rem;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 40%);
+}
+
+.dialog {
+  display: grid;
+  gap: 0.75rem;
+  width: min(360px, calc(100% - 2rem));
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.dialog h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.dialog p {
+  margin: 0;
+}
+
+.dialog input {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+
+.dialog-actions,
+.composer-actions,
+.thread-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+:is(.dialog-actions, .composer-actions, .thread-actions, .comment-actions)
+  button {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--hover);
+  color: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+:is(.dialog-actions, .composer-actions) button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .app-sidebar {
@@ -150,6 +270,134 @@ body {
 .code-src {
   padding: 0 1rem 0 0.5rem;
   white-space: pre;
+}
+
+.code.commentable .code-ln {
+  cursor: pointer;
+}
+
+.code.commentable .code-ln:hover {
+  color: var(--accent);
+}
+
+.code tr.selected td {
+  background: var(--line-selected);
+}
+
+.code-inline > td {
+  padding: 0.5rem 1rem 0.5rem 3.5rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.thread,
+.composer {
+  max-width: 760px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.thread-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--hover);
+  color: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thread-header[aria-expanded="false"] {
+  border-bottom: 0;
+}
+
+.thread-header .muted {
+  overflow: hidden;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label {
+  padding: 0 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.comment {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.comment-meta time {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.comment-body {
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.comment-body a {
+  color: var(--link);
+}
+
+.thread-actions {
+  padding: 0.5rem 0.75rem;
+}
+
+.thread .composer {
+  border: 0;
+  border-radius: 0;
+}
+
+.composer {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.composer textarea {
+  min-height: 4.5em;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+.composer-error {
+  margin: 0;
+  padding: 0 0.75rem;
+  color: var(--danger);
+  font-size: 0.8125rem;
 }
 
 .viewer-tabs {

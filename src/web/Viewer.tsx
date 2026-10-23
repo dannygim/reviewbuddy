@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FileView } from "../shared/api";
 import { fetchFile, rawUrl } from "./api";
+import { CodeView } from "./CodeView";
 import { MarkdownPreview } from "./MarkdownPreview";
 
 type State = { view: FileView } | { error: string } | null;
@@ -65,7 +66,7 @@ function ViewerBody({ state, mode }: { state: State; mode: Mode }) {
       return mode === "preview" ? (
         <MarkdownPreview html={view.previewHtml} />
       ) : (
-        <CodeView lineHtml={view.lineHtml} />
+        <CodeView path={view.path} lineHtml={view.lineHtml} />
       );
     default:
       return (
@@ -75,27 +76,8 @@ function ViewerBody({ state, mode }: { state: State; mode: Mode }) {
               This file is large, so it is shown without highlighting.
             </p>
           )}
-          <CodeView lineHtml={view.lineHtml} />
+          <CodeView path={view.path} lineHtml={view.lineHtml} />
         </>
       );
   }
-}
-
-function CodeView({ lineHtml }: { lineHtml: string[] }) {
-  return (
-    <table className="code">
-      <tbody>
-        {lineHtml.map((html, i) => (
-          <tr key={i} data-line={i + 1}>
-            <td className="code-ln">{i + 1}</td>
-            {/* Server-rendered: Shiki tokens with escaped text. */}
-            <td
-              className="code-src"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
 }

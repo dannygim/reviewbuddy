@@ -54,7 +54,7 @@ beforeAll(async () => {
     index: await FileIndex.create(root),
     allowedHosts: [],
     maxHighlightBytes: 2_000_000,
-    session: testSession(),
+    session: testSession({ readOnly: true }),
   });
 });
 
@@ -99,7 +99,10 @@ test("does not run scripts from the Markdown", async () => {
 test("switches to the source view", async () => {
   await using view = await open("doc/guide.md");
   await view.click('[data-mode="source"]');
-  await waitFor(view, `document.querySelectorAll(".code tr").length === 22`);
+  await waitFor(
+    view,
+    `document.querySelectorAll(".code tr[data-line]").length === 22`,
+  );
 }, 30_000);
 
 test("follows relative links to other files", async () => {
