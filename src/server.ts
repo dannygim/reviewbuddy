@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { type AccessGate, authCookie, authCookieName } from "./auth";
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
 import { errorResponse, type Handler } from "./http";
@@ -49,11 +50,14 @@ export type ServerOptions = {
   sessionPollMs?: number;
   /** Watch the root and push file.changed / tree.changed (default false). */
   watch?: boolean;
+  /** Requires the PIN before anything else; without it anyone can use the server (tests). */
+  access?: AccessGate;
 };
 
 export type AppServer = Bun.Server<SocketData>;
 
 const PORT_ATTEMPTS = 20;
+const NEED_PIN = "Enter the PIN shown where akapen was started.";
 const RAW_HEADERS = {
   // A raw SVG opened directly must not run scripts in our origin.
   "Content-Security-Policy":
@@ -77,22 +81,33 @@ export function startServer(options: ServerOptions): AppServer {
 }
 
 function listen(options: ServerOptions, port: number): AppServer {
-  const { root, index: files, session } = options;
+  const { root, index: files, session, access } = options;
   const hub = new Hub();
+  // Open without the PIN (to find a running server), so no root path.
   const health: Health = {
     name: "akapen",
     version: VERSION,
-    root,
     sessionId: session.meta.id,
   };
+  // The port is known once listening (port 0 picks one).
+  const cookieName = (): string => authCookieName(server.port ?? port);
 
   // Against DNS rebinding (docs/design/セキュリティ.md).
-  const guard =
+  const allowHost =
     (handler: Handler): Handler =>
     (req) =>
       isAllowedHost(req.headers.get("host"), options.allowedHosts)
         ? handler(req)
         : errorResponse(403, "Host not allowed");
+
+  // Only browsers that entered the PIN (docs/adr/0007-access-pin.md).
+  const authorized = (req: Request) =>
+    !access || access.isAuthorized(req.headers.get("cookie"), cookieName());
+
+  const guard = (handler: Handler): Handler =>
+    allowHost((req) =>
+      authorized(req) ? handler(req) : errorResponse(401, NEED_PIN),
+    );
 
   // Against CSRF: the token and the JSON content type both require a
   // same-origin page, since other origins cannot read the token or send them.
@@ -178,14 +193,29 @@ function listen(options: ServerOptions, port: number): AppServer {
     return { path, abs: resolveFile(root, files, path) };
   };
 
-  const server = Bun.serve({
+  const server: AppServer = Bun.serve({
     hostname: options.host,
     port,
     // `bun build --compile` implies --production, which inlines NODE_ENV=production.
     development: process.env.NODE_ENV !== "production",
     routes: {
       "/": index,
-      "/api/health": guard(() => Response.json(health)),
+      "/api/health": allowHost(() => Response.json(health)),
+      "/api/login": {
+        POST: allowHost(async (req) => {
+          if (!access) return errorResponse(404, "Not found");
+          if (!req.headers.get("content-type")?.includes("application/json")) {
+            return errorResponse(415, "Expected application/json");
+          }
+          const body = await req.json().catch(() => null);
+          const result = access.login((body as { pin?: unknown } | null)?.pin);
+          if (!result.ok) return errorResponse(result.status, result.error);
+          return new Response(null, {
+            status: 204,
+            headers: { "Set-Cookie": authCookie(cookieName(), result.token) },
+          });
+        }),
+      },
       "/api/session": guard(() => Response.json(sessionInfo())),
       "/api/session/end": {
         POST: write(() => {
@@ -229,6 +259,7 @@ function listen(options: ServerOptions, port: number): AppServer {
       }
       const url = new URL(req.url);
       if (url.pathname !== "/ws") return errorResponse(404, "Not found");
+      if (!authorized(req)) return errorResponse(401, NEED_PIN);
       // Same rules as writes: the token proves the page is ours.
       if (url.searchParams.get("token") !== session.token) {
         return errorResponse(403, "Missing or invalid token");

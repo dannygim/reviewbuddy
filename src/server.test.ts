@@ -45,13 +45,12 @@ async function get(path: string, headers: Record<string, string> = {}) {
 }
 
 describe("startServer", () => {
-  test("GET /api/health reports the app and root", async () => {
+  test("GET /api/health reports the app and the session", async () => {
     const res = await get("/api/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       name: "akapen",
       version: VERSION,
-      root,
       sessionId: testSession().meta.id,
     });
   });
