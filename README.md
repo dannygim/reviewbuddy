@@ -116,6 +116,12 @@ ended_days = 14          # 0 = never delete ended sessions
 
 akapen has no login: anyone who can reach it can read the files it shows and comment. It is meant for people you trust, for example on your tailnet. It refuses requests whose `Host` header is not an IP address, `localhost`, a `*.ts.net` name or a configured name (against DNS rebinding), requires a per-server token for writes and WebSockets (against CSRF and cross-site WebSocket hijacking), only serves files in the file list (nothing ignored by `.gitignore`, nothing outside the directory), and never loads the reviewed directory's `.env`. See [docs/design/セキュリティ.md](docs/design/セキュリティ.md).
 
+## Troubleshooting
+
+- **`mise ERROR Config files in .../mise.toml are not trusted`** when running `akapen` inside a project: mise's shims read the project's `mise.toml` first. Run `mise trust` in that project (or review the file first if it is not yours).
+- **`listener already exists for port 443`** from `tailscale serve`: another service already uses 443 on this machine; serve akapen with `tailscale serve --https=8443 4400` (see above).
+- **Port 4400 is taken**: without `--port`, akapen moves to the next free port and prints the URL. With `--port` (or `AKAPEN_PORT` / `server.port`), it stops instead, so a proxy never points at the wrong port.
+
 ## Development
 
 Requires [Bun](https://bun.com) 1.4.4 (pinned in `mise.toml`).

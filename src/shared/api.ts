@@ -8,6 +8,8 @@ export type Health = {
 export type SessionInfo = {
   id: string;
   root: string;
+  /** The root with the home directory shown as ~. */
+  rootDisplay: string;
   status: "active" | "ended";
   readOnly: boolean;
   /** Send as X-Akapen-Token on writes. */

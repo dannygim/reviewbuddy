@@ -130,12 +130,14 @@ export function App() {
       <div className="app">
         <header className="app-header">
           <strong>akapen</strong>
-          <span className="app-root">
+          <span className="app-root" title={session?.root}>
             {error
               ? "Cannot reach the akapen server."
-              : (session?.root ?? "Connecting…")}
+              : (session?.rootDisplay ?? "Connecting…")}
           </span>
-          {session && <span className="muted">session {session.id}</span>}
+          {session && (
+            <span className="app-session muted">session {session.id}</span>
+          )}
           <span className="app-spacer" />
           {session && (
             <button

@@ -72,3 +72,38 @@ test("opens the file named in the URL hash and reveals it in the tree", async ()
     `document.querySelector('[data-path="doc/A.md"]')?.getAttribute("aria-current") === "page"`,
   );
 }, 30_000);
+
+test("keeps the header on one line with a long root path", async () => {
+  const longRoot = join(
+    root,
+    "a-directory-with-a-rather-long-name-for-a-project",
+    "and-another-nested-one",
+  );
+  mkdirSync(longRoot, { recursive: true });
+  writeFileSync(join(longRoot, "x.md"), "# X\n");
+  const longServer = startServer({
+    root: longRoot,
+    host: "127.0.0.1",
+    port: 0,
+    strictPort: true,
+    index: await FileIndex.create(longRoot),
+    allowedHosts: [],
+    maxHighlightBytes: 2_000_000,
+    session: testSession(),
+  });
+  try {
+    await using view = webView({ width: 900, height: 600 });
+    await view.navigate(longServer.url.href);
+    await view.click(".dialog input");
+    await view.type("A");
+    await view.click('.dialog button[type="submit"]');
+    await waitFor(view, `!!document.querySelector('[data-action="review"]')`);
+    const heights = (await view.evaluate(
+      `[".app-header", '[data-action="review"]'].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().height))`,
+    )) as number[];
+    expect(heights[0]).toBeLessThan(56);
+    expect(heights[1]).toBeLessThan(36);
+  } finally {
+    await longServer.stop(true);
+  }
+}, 30_000);

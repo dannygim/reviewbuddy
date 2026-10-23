@@ -63,6 +63,20 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.app-header > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* A long root or session id is cut short instead of wrapping the header. */
+.app-header > .app-root,
+.app-header > .app-session {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .app-root {
   color: var(--muted);
   font-size: 0.875rem;

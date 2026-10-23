@@ -10,6 +10,7 @@ import { splitLines } from "./render/highlight";
 import { type Body, InputError } from "./review/input";
 import { reviewRoutes } from "./review/routes";
 import { ReviewError, type ReviewStore } from "./review/store";
+import { displayRoot } from "./root";
 import { isAllowedHost, isAllowedOrigin } from "./security";
 import type { SessionMeta } from "./session/session";
 import type { Health, SessionInfo, TreeResponse } from "./shared/api";
@@ -134,6 +135,7 @@ function listen(options: ServerOptions, port: number): AppServer {
   const sessionInfo = (): SessionInfo => ({
     id: session.meta.id,
     root,
+    rootDisplay: displayRoot(root),
     status: session.meta.status,
     readOnly: session.readOnly,
     token: session.token,
