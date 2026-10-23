@@ -166,7 +166,12 @@ export function App() {
               <p className="viewer-note">Select a file to start reviewing.</p>
             )}
           </main>
-          {reviewing && <ReviewPanel onClose={() => setReviewing(false)} />}
+          {reviewing && session && (
+            <ReviewPanel
+              session={session}
+              onClose={() => setReviewing(false)}
+            />
+          )}
         </div>
       </div>
       {(askNickname || renaming) && (

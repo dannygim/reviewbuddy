@@ -1,10 +1,6 @@
 import { useMemo, useState } from "react";
-import {
-  DEFAULT_PROMPT_OPTIONS,
-  formatPrompt,
-  sortThreads,
-} from "../prompt/format";
-import type { Thread } from "../shared/api";
+import { formatPrompt, sortThreads } from "../prompt/format";
+import type { SessionInfo, Thread } from "../shared/api";
 import { requestPrompt } from "./api";
 import { copyText } from "./clipboard";
 import { useReviewer } from "./context";
@@ -21,7 +17,13 @@ const FILTERS: [Filter, string, (t: Thread) => boolean][] = [
 ];
 
 /** All threads of the session, with prompt generation for the selected ones. */
-export function ReviewPanel({ onClose }: { onClose: () => void }) {
+export function ReviewPanel({
+  session,
+  onClose,
+}: {
+  session: SessionInfo;
+  onClose: () => void;
+}) {
   const reviewer = useReviewer();
   const threads = useThreads();
   const sorted = useMemo(() => sortThreads(threads), [threads]);
@@ -30,7 +32,7 @@ export function ReviewPanel({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState(
     () => new Set(threads.filter((t) => t.status === "open").map((t) => t.id)),
   );
-  const [resolveCopied, setResolveCopied] = useState(false);
+  const [resolveCopied, setResolveCopied] = useState(session.resolveOnCopy);
   const [notice, setNotice] = useState<string | null>(null);
   const [manual, setManual] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,7 +55,7 @@ export function ReviewPanel({ onClose }: { onClose: () => void }) {
       let text: string;
       if (reviewer.readOnly) {
         // An ended session cannot record exports; format in the browser.
-        text = formatPrompt(chosen, DEFAULT_PROMPT_OPTIONS);
+        text = formatPrompt(chosen, session.prompt);
       } else {
         const res = await requestPrompt(
           chosen.map((t) => t.id),

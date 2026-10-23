@@ -12,6 +12,10 @@ export type SessionInfo = {
   readOnly: boolean;
   /** Send as X-Akapen-Token on writes. */
   token: string;
+  /** Default of "Resolve copied threads" (config prompt.resolve_on_copy). */
+  resolveOnCopy: boolean;
+  /** Prompt settings, for formatting in the browser when read-only. */
+  prompt: { preamble: string; maxAnchorLines: number };
 };
 
 export type TreeResponse = { files: string[] };

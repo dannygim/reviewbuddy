@@ -1,40 +1,40 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_HOST, DEFAULT_PORT, parseCliArgs, UsageError } from "./args";
+import { parseCliArgs, UsageError } from "./args";
 
-describe("parseCliArgs", () => {
-  test("defaults to the current directory on 127.0.0.1:4400", () => {
+describe("parseCliArgs serve", () => {
+  test("leaves unset options to the config and defaults", () => {
     expect(parseCliArgs([])).toEqual({
       kind: "serve",
       dir: ".",
-      host: DEFAULT_HOST,
-      port: DEFAULT_PORT,
-      strictPort: false,
+      watch: true,
       fresh: false,
     });
   });
 
-  test("takes a directory, port and host; an explicit port is strict", () => {
-    expect(parseCliArgs(["docs", "-p", "5000", "--host", "0.0.0.0"])).toEqual({
+  test("takes a directory and every option", () => {
+    expect(
+      parseCliArgs([
+        "docs",
+        "-p",
+        "5000",
+        "--host",
+        "0.0.0.0",
+        "--open",
+        "--no-watch",
+        "--new",
+      ]),
+    ).toEqual({
       kind: "serve",
       dir: "docs",
       host: "0.0.0.0",
       port: 5000,
-      strictPort: true,
-      fresh: false,
-    });
-  });
-
-  test("--new starts a fresh session", () => {
-    expect(parseCliArgs(["--new"])).toMatchObject({
-      kind: "serve",
+      open: true,
+      watch: false,
       fresh: true,
     });
-  });
-
-  test("--session opens a session by id", () => {
-    expect(parseCliArgs(["--session", "20261023-1530-p-3f9a"])).toMatchObject({
-      kind: "serve",
-      sessionId: "20261023-1530-p-3f9a",
+    expect(parseCliArgs(["--no-open"])).toMatchObject({ open: false });
+    expect(parseCliArgs(["--session", "s1"])).toMatchObject({
+      sessionId: "s1",
     });
   });
 
@@ -44,6 +44,13 @@ describe("parseCliArgs", () => {
 
   test.each([["--help"], ["-h"]])("%s prints the help", (flag) => {
     expect(parseCliArgs([flag])).toEqual({ kind: "help" });
+  });
+
+  test("a directory named like a subcommand can be opened as a path", () => {
+    expect(parseCliArgs(["./export"])).toMatchObject({
+      kind: "serve",
+      dir: "./export",
+    });
   });
 
   test.each([
@@ -56,6 +63,7 @@ describe("parseCliArgs", () => {
       "--session cannot be combined with a directory",
     ],
     [["--session", "x", "--new"], "--session cannot be combined with --new"],
+    [["--open", "--no-open"], "--open cannot be combined with --no-open"],
   ])("rejects %p", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);
     expect(() => parseCliArgs(argv)).toThrow(message);
@@ -97,11 +105,39 @@ describe("parseCliArgs export", () => {
   ])("rejects %p", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(message);
   });
+});
 
-  test("a directory named export can be opened as ./export", () => {
-    expect(parseCliArgs(["./export"])).toMatchObject({
-      kind: "serve",
-      dir: "./export",
-    });
+describe("parseCliArgs session and config", () => {
+  test.each([
+    [["session", "ls"], { action: "ls", all: false }],
+    [["session", "ls", "--all"], { action: "ls", all: true }],
+    [["session", "end"], { action: "end", target: "." }],
+    [["session", "end", "s1"], { action: "end", target: "s1" }],
+    [["session", "reopen", "s1"], { action: "reopen", id: "s1" }],
+    [["session", "rm", "s1", "s2"], { action: "rm", ids: ["s1", "s2"] }],
+    [["session", "prune", "--dry-run"], { action: "prune", dryRun: true }],
+  ])("%p", (argv, expected) => {
+    expect(parseCliArgs(argv)).toEqual({
+      kind: "session",
+      ...expected,
+    } as never);
+  });
+
+  test.each([["init"], ["path"], ["show"]])("config %s", (action) => {
+    expect(parseCliArgs(["config", action])).toEqual({
+      kind: "config",
+      action,
+    } as never);
+  });
+
+  test.each([
+    [["session"], "Invalid session command"],
+    [["session", "kill"], "Invalid session command: kill"],
+    [["session", "reopen"], "Expected one session id"],
+    [["session", "rm"], "Expected at least one session id"],
+    [["config", "edit"], "Invalid config command: edit"],
+    [["config"], "Expected: akapen config init | path | show"],
+  ])("rejects %p", (argv, message) => {
+    expect(() => parseCliArgs(argv)).toThrow(message);
   });
 });

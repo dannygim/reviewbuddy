@@ -1,12 +1,34 @@
 import { join } from "node:path";
-import { parseCliArgs, UsageError, USAGE } from "./args";
+import {
+  type Command,
+  parseCliArgs,
+  type ServeCommand,
+  type SessionCommand,
+  UsageError,
+  USAGE,
+} from "./args";
+import {
+  type Config,
+  ConfigError,
+  configPath,
+  configToToml,
+  initConfig,
+  loadConfig,
+} from "./config/config";
 import { FileIndex } from "./files/file-index";
 import { exportThreads, findExportSession } from "./prompt/export";
-import { DEFAULT_MAX_HIGHLIGHT_BYTES } from "./render/file-view";
 import { openReviewDb } from "./review/db";
 import { ReviewStore } from "./review/store";
 import { resolveRoot } from "./root";
 import { type SessionContext, startServer } from "./server";
+import {
+  autoPrune,
+  endSessionCommand,
+  listSessionsText,
+  pruneSessions,
+  removeSessions,
+  reopenSessionCommand,
+} from "./session/commands";
 import { akapenHome } from "./session/home";
 import { findRunningServer, removeLock, writeLock } from "./session/lock";
 import {
@@ -18,20 +40,39 @@ import {
 } from "./session/session";
 import { VERSION } from "./version";
 
-type ServeCommand = Extract<ReturnType<typeof parseCliArgs>, { kind: "serve" }>;
+function settings(home: string) {
+  const loaded = loadConfig(home);
+  for (const warning of loaded.warnings)
+    console.error(`akapen: warning: ${warning}`);
+  return loaded;
+}
 
-async function serve(command: ServeCommand): Promise<void> {
-  const home = akapenHome();
+function openBrowser(url: string): void {
+  const command = process.platform === "darwin" ? "open" : "xdg-open";
+  try {
+    Bun.spawn([command, url], { stdout: "ignore", stderr: "ignore" });
+  } catch {
+    // No browser launcher; the URL is printed anyway.
+  }
+}
+
+async function serve(command: ServeCommand, home: string): Promise<void> {
+  const { config, portExplicit } = settings(home);
+  const pruned = autoPrune(home, config.retention);
+  if (pruned) console.log(pruned);
+
   const { meta, readOnly } = command.sessionId
     ? openSession(home, "", { id: command.sessionId })
     : openSession(home, resolveRoot(command.dir), { fresh: command.fresh });
   const root = resolveRoot(meta.root);
   const dir = sessionDir(home, meta.id);
+  const open = command.open ?? config.server.openBrowser;
 
   const running = await findRunningServer(dir, meta.id);
   if (running) {
     console.log(`akapen is already reviewing ${root}`);
     console.log(`  ${running}`);
+    if (open) openBrowser(running);
     return;
   }
 
@@ -46,18 +87,24 @@ async function serve(command: ServeCommand): Promise<void> {
       session.meta = touchSession(home, session.meta);
     },
   };
+  const host = command.host ?? config.server.host;
   const server = startServer({
-    ...command,
     root,
-    index: await FileIndex.create(root),
-    allowedHosts: [],
-    maxHighlightBytes: DEFAULT_MAX_HIGHLIGHT_BYTES,
+    host,
+    port: command.port ?? config.server.port,
+    // An explicit port must not silently move (e.g. `tailscale serve 4400` proxies to it).
+    strictPort: command.port !== undefined || portExplicit,
+    index: await FileIndex.create(root, { exclude: config.viewer.exclude }),
+    allowedHosts: config.server.allowedHosts,
+    maxHighlightBytes: config.viewer.maxHighlightBytes,
+    prompt: config.prompt,
+    resolveOnCopy: config.prompt.resolveOnCopy,
     session,
   });
 
   writeLock(dir, {
     pid: process.pid,
-    host: command.host,
+    host,
     port: server.port!,
     url: server.url.href,
     startedAt: localIso(new Date()),
@@ -70,10 +117,30 @@ async function serve(command: ServeCommand): Promise<void> {
   console.log(`  ${server.url}`);
   if (readOnly)
     console.log(`  Session ${meta.id} has ended; comments are read-only.`);
+  if (open) openBrowser(server.url.href);
 }
 
-async function run(argv: string[]): Promise<void> {
-  const command = parseCliArgs(argv);
+function session(
+  command: SessionCommand,
+  home: string,
+  config: Config,
+): string {
+  switch (command.action) {
+    case "ls":
+      return listSessionsText(home, command.all);
+    case "end":
+      return endSessionCommand(home, command.target);
+    case "reopen":
+      return reopenSessionCommand(home, command.id);
+    case "rm":
+      return removeSessions(home, command.ids);
+    case "prune":
+      return pruneSessions(home, config.retention, command.dryRun);
+  }
+}
+
+async function run(command: Command): Promise<void> {
+  const home = akapenHome();
   switch (command.kind) {
     case "help":
       console.log(USAGE);
@@ -82,33 +149,57 @@ async function run(argv: string[]): Promise<void> {
       console.log(VERSION);
       return;
     case "serve":
-      return serve(command);
+      return serve(command, home);
     case "export": {
-      const home = akapenHome();
+      const { config } = settings(home);
       const meta = findExportSession(
         home,
         command.sessionId
           ? { sessionId: command.sessionId }
           : { root: resolveRoot(command.dir) },
       );
-      process.stdout.write(exportThreads(home, meta, command));
+      process.stdout.write(
+        exportThreads(home, meta, { ...command, prompt: config.prompt }),
+      );
       return;
     }
+    case "session":
+      console.log(session(command, home, settings(home).config));
+      return;
+    case "config":
+      switch (command.action) {
+        case "init":
+          console.log(
+            initConfig(home)
+              ? `Created ${configPath(home)}`
+              : `${configPath(home)} already exists; left it unchanged.`,
+          );
+          return;
+        case "path":
+          console.log(configPath(home));
+          return;
+        case "show":
+          process.stdout.write(configToToml(settings(home).config));
+          return;
+      }
   }
 }
 
-run(Bun.argv.slice(2)).catch((error) => {
-  if (error instanceof UsageError) {
-    console.error(`akapen: ${error.message}\n\n${USAGE}`);
-    process.exitCode = 2;
-  } else if (
-    error instanceof SessionError ||
-    (error as { code?: string }).code === "EADDRINUSE"
-  ) {
-    console.error(`akapen: ${(error as Error).message}`);
-    process.exitCode = 1;
-  } else {
-    console.error(error);
-    process.exitCode = 1;
-  }
-});
+Promise.resolve()
+  .then(() => run(parseCliArgs(Bun.argv.slice(2))))
+  .catch((error) => {
+    if (error instanceof UsageError) {
+      console.error(`akapen: ${error.message}\n\n${USAGE}`);
+      process.exitCode = 2;
+    } else if (
+      error instanceof SessionError ||
+      error instanceof ConfigError ||
+      (error as { code?: string }).code === "EADDRINUSE"
+    ) {
+      console.error(`akapen: ${(error as Error).message}`);
+      process.exitCode = 1;
+    } else {
+      console.error(error);
+      process.exitCode = 1;
+    }
+  });

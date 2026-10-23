@@ -5,6 +5,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -133,5 +134,42 @@ describe("akapen export", () => {
 
   test("rejects unknown options", () => {
     expect(exportCli("--format", "xml").exitCode).toBe(2);
+  });
+});
+
+describe("akapen config and session", () => {
+  const configHome = join(base, "config-home");
+  const configEnv = { ...process.env, AKAPEN_HOME: configHome };
+  const run = (...args: string[]) =>
+    Bun.spawnSync([process.execPath, cli, ...args], { env: configEnv });
+
+  test("config path, init and show", () => {
+    expect(run("config", "path").stdout.toString().trim()).toBe(
+      join(configHome, "config.toml"),
+    );
+    expect(run("config", "init").stdout.toString()).toContain("Created");
+    expect(run("config", "init").stdout.toString()).toContain(
+      "left it unchanged",
+    );
+    const shown = run("config", "show").stdout.toString();
+    expect(shown).toContain('[server]\nhost = "127.0.0.1"\nport = 4400\n');
+  });
+
+  test("an invalid config.toml stops akapen with the key path", () => {
+    writeFileSync(join(configHome, "config.toml"), '[server]\nport = "x"\n');
+    const result = run(root);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain(
+      "config.toml: server.port must be an integer from 0 to 65535",
+    );
+  });
+
+  test("session ls lists the sessions of a home", () => {
+    const listed = Bun.spawnSync(
+      [process.execPath, cli, "session", "ls", "--all"],
+      { env },
+    );
+    expect(listed.exitCode).toBe(0);
+    expect(listed.stdout.toString()).toMatch(/^ID\s+STATUS/);
   });
 });

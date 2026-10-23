@@ -34,6 +34,8 @@ export type ServerOptions = {
   session: SessionContext;
   /** Defaults to an empty preamble and 30 anchor lines. */
   prompt?: PromptOptions;
+  /** Default of "Resolve copied threads" in the Review panel. */
+  resolveOnCopy?: boolean;
 };
 
 export type AppServer = Bun.Server<SocketData>;
@@ -137,6 +139,8 @@ function listen(options: ServerOptions, port: number): AppServer {
           status: session.meta.status,
           readOnly: session.readOnly,
           token: session.token,
+          resolveOnCopy: options.resolveOnCopy ?? false,
+          prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
         } satisfies SessionInfo),
       ),
       "/api/tree": guard(() =>
