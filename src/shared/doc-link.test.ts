@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { docPathFromHash, hashForDocPath } from "./router";
+import { docPathFromHash, hashForDocPath } from "./doc-link";
 
 test.each([
   ["doc/A.md", "#/doc/doc/A.md"],
