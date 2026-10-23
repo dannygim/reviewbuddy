@@ -62,7 +62,8 @@
 - `--sourcemap` を付けると、出力先に `.map` ファイルも書き出される **確認済** (実行)
 - `--bytecode` の出力は、`--format` を省略すると CommonJS になる。ESM のバイトコードは `--compile` と `--format=esm` の両方が必要。バイトコードは Bun のバージョン間で互換性がない **確認済** (`@types/bun` 1.4.4 同梱のドキュメント)
 - バイナリのサイズ: HTML import + Shiki + WebSocket の最小サーバーで約 114MB (Linux x64、Shiki の全言語・テーマを含む)。M0 の時点 (React のみ、Shiki なし) では約 92MB (macOS arm64) **確認済** (実行)
-- サイズ削減: `shiki/core` + 使用する言語だけを読み込む構成にすると縮むはず **要検証** (効果量)
+- サイズ削減: `shiki/core` + Oniguruma エンジン + 使う言語 (約 40) だけを読み込むと、M1 のバイナリは `--minify --sourcemap` で 101MB (macOS arm64)。WASM も単一バイナリの中で動く **確認済** (実行)
+- `--bytecode` の効果 (M1 のバイナリ、macOS arm64): サイズが 101.0MB → 112.4MB に増え、起動 (URL を出すまで) は 35ms → 22ms になる **確認済** (実行)。akapen では付けない ([M1_ツリーとコード表示_詳細計画.md](../plan/M1_ツリーとコード表示_詳細計画.md) の計測結果)
 - macOS の署名: ドキュメントは `codesign` での署名と、JIT 権限を含む `entitlements.plist` の付与を推奨している (v1.2.4+)。Linux からクロスコンパイルした darwin バイナリを Linux 上で署名できるかは記載なし → darwin 版は macOS ランナーでビルド・署名する **確認済** (記載内容) / mise 経由のダウンロードで Gatekeeper の警告が出ないこと **要検証**
 
 ### bun:sqlite

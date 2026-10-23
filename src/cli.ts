@@ -31,7 +31,6 @@ async function run(argv: string[]): Promise<void> {
   }
 }
 
-// No top-level await: `--bytecode` builds a CommonJS bundle.
 run(Bun.argv.slice(2)).catch((error) => {
   if (error instanceof UsageError) {
     console.error(`akapen: ${error.message}\n\n${USAGE}`);
