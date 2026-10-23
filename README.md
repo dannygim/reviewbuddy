@@ -42,11 +42,12 @@ mise settings set github.credential_command 'gh auth token --hostname "$MISE_CRE
 ```sh
 cd your-project
 akapen            # or: akapen path/to/dir
-# akapen 0.1.0 is reviewing /Users/me/your-project
+# akapen 0.2.0 is reviewing /Users/me/your-project
 #   http://127.0.0.1:4400/
+#   PIN: 482 913
 ```
 
-Open the URL, pick a nickname, and choose a file.
+Open the URL, enter a nickname and the PIN, and choose a file. Share the URL and the PIN with the people you review with — for example, say the PIN in the call instead of posting it next to the URL. The PIN changes every time akapen starts, so everyone enters it again after a restart.
 
 - **Comment on code**: click a line number, Shift+click or drag to select a range, then write a comment.
 - **Comment on Markdown**: in the Preview tab, hover a block and click **+** (Shift+click another block to extend).
@@ -73,6 +74,19 @@ tailscale serve --https=8443 4400    # https://<machine>.<tailnet>.ts.net:8443/
 Don't use `--set-path` to put akapen under a sub-path: the app loads its API and assets from absolute paths.
 
 Alternatively, listen on all interfaces with `akapen --host 0.0.0.0` and share `http://<tailscale-ip>:4400/`. Over plain HTTP the browser's clipboard API is unavailable, so **Copy prompt** falls back to a dialog where you copy the text yourself. If you connect with a MagicDNS short name, add it to `server.allowed_hosts` in the config.
+
+### Sharing with people who don't use Tailscale
+
+- **[Tailscale Funnel](https://tailscale.com/kb/1223/funnel)** puts akapen on the public internet, so a browser is all they need. Anyone who finds the URL can reach it, and only the PIN keeps them out — use akapen 0.2.0 or later, and turn Funnel off when you are done. Funnel needs the `funnel` attribute in your tailnet policy (approve it when the first `tailscale funnel` asks), and only ports 443, 8443 and 10000:
+
+  ```sh
+  akapen --port 4400
+  tailscale funnel --bg --https=8443 4400   # https://<machine>.<tailnet>.ts.net:8443/
+  tailscale funnel --https=8443 off         # when you are done
+  ```
+
+  A port is either in your tailnet (`serve`) or public (`funnel`), whichever you ran last. On macOS, Tailscale's docs disagree on whether the App Store and Standalone apps support Funnel.
+- **[Share the machine](https://tailscale.com/kb/1084/sharing)** (admin console → Machines → your machine → Share) to keep it private. They install Tailscale, sign up for free and accept the invite, then open the full name (`https://<machine>.<tailnet>.ts.net:8443/`; short names don't work for shared machines). If your policy restricts access, allow `autogroup:shared` to the HTTPS port.
 
 ### Exporting from the command line
 
@@ -122,7 +136,7 @@ ended_days = 14          # 0 = never delete ended sessions
 
 ## Security
 
-akapen has no login: anyone who can reach it can read the files it shows and comment. It is meant for people you trust, for example on your tailnet. It refuses requests whose `Host` header is not an IP address, `localhost`, a `*.ts.net` name or a configured name (against DNS rebinding), requires a per-server token for writes and WebSockets (against CSRF and cross-site WebSocket hijacking), only serves files in the file list (nothing ignored by `.gitignore`, nothing outside the directory), and never loads the reviewed directory's `.env`. See [docs/design/セキュリティ.md](docs/design/セキュリティ.md).
+akapen has no accounts. Each start prints a new 6-digit PIN, and only browsers that entered it can see files and comments (an HttpOnly cookie, forgotten on restart). Wrong PINs are limited to 5 a minute; after 20, akapen refuses every login until you restart it for a new PIN. Over plain HTTP (`--host 0.0.0.0`) the PIN and the cookie travel unencrypted, so prefer `tailscale serve`. Everyone with the PIN can read and comment, and nicknames are not verified. akapen also refuses requests whose `Host` header is not an IP address, `localhost`, a `*.ts.net` name or a configured name (against DNS rebinding), requires a per-server token for writes and WebSockets (against CSRF and cross-site WebSocket hijacking), only serves files in the file list (nothing ignored by `.gitignore`, nothing outside the directory), and never loads the reviewed directory's `.env`. See [docs/design/セキュリティ.md](docs/design/セキュリティ.md).
 
 ## Troubleshooting
 

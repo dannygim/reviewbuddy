@@ -59,9 +59,13 @@ akapen config show                 # 反映後の設定値を出す
 ### 起動時の出力
 
 ```text
-akapen 0.1.0 is reviewing /Users/me/work/project
+akapen 0.2.0 is reviewing /Users/me/work/project
   http://127.0.0.1:4400/
+  PIN: 482 913
 ```
+
+- PIN は起動のたびに変わる。参加者は最初の画面で入力する ([セキュリティ.md](./セキュリティ.md))
+- PIN の失敗が通算 20 回になると、標準エラーに `akapen: too many wrong PINs; restart akapen to get a new PIN.` を出す (以後のログインはすべて拒否する)
 
 - 多重起動を検知したとき (同じルートのサーバーが動いている) は、既存の URL を出して終了コード 0 で終わる ([保存先とセッション.md](./保存先とセッション.md))
 - 自動で削除したセッションがあれば 1 行のログを出す
