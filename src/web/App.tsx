@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionInfo } from "../shared/api";
+import type { ServerEvent } from "../shared/events";
 import { fetchSession, fetchThreads, fetchTree } from "./api";
 import { type Reviewer, ReviewerContext } from "./context";
 import { FileTree } from "./FileTree";
 import { clientId, useNickname } from "./identity";
 import { NicknameDialog } from "./NicknameDialog";
+import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
+import { announce, announceView, connectRealtime } from "./realtime";
 import { openDoc, useDocPath } from "./router";
 import { threadStore, useThreads } from "./store";
 import { Viewer } from "./Viewer";
@@ -16,18 +19,55 @@ export function App() {
   const [nickname, setNickname] = useNickname();
   const [renaming, setRenaming] = useState(false);
   const threads = useThreads();
+  const participants = usePresence();
   const docPath = useDocPath();
 
-  useEffect(() => {
-    Promise.all([fetchSession(), fetchTree(), fetchThreads()]).then(
-      ([session, tree, threads]) => {
-        setSession(session);
-        setFiles(tree.files);
-        threadStore.replaceAll(threads);
-      },
-      () => setError(true),
-    );
+  const refetch = useCallback(async () => {
+    const [tree, threads] = await Promise.all([fetchTree(), fetchThreads()]);
+    setFiles(tree.files);
+    threadStore.replaceAll(threads);
   }, []);
+
+  useEffect(() => {
+    fetchSession()
+      .then(async (session) => {
+        await refetch();
+        setSession(session);
+      })
+      .catch(() => setError(true));
+  }, [refetch]);
+
+  useEffect(() => {
+    if (!session) return;
+    const onEvent = (event: ServerEvent) => {
+      switch (event.type) {
+        case "presence.changed":
+          presenceStore.replaceAll(event.participants);
+          break;
+        case "thread.created":
+        case "thread.updated":
+          threadStore.upsert(event.thread);
+          break;
+        case "thread.deleted":
+          threadStore.remove(event.threadId);
+          break;
+        case "tree.changed":
+          void fetchTree().then((tree) => setFiles(tree.files));
+          break;
+      }
+    };
+    return connectRealtime({
+      token: session.token,
+      onEvent,
+      onReconnect: () => void refetch(),
+    });
+  }, [session, refetch]);
+
+  useEffect(() => {
+    if (nickname) announce(nickname, clientId);
+  }, [nickname]);
+
+  useEffect(() => announceView(docPath), [docPath]);
 
   const openCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -38,6 +78,17 @@ export function App() {
     }
     return counts;
   }, [threads]);
+
+  const people = uniquePeople(participants);
+  const others = people.filter((p) => p.clientId !== clientId);
+  const viewers = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of uniquePeople(participants)) {
+      if (p.clientId === clientId || !p.path) continue;
+      map.set(p.path, [...(map.get(p.path) ?? []), p.nickname]);
+    }
+    return map;
+  }, [participants]);
 
   const reviewer = useMemo<Reviewer>(
     () => ({
@@ -61,11 +112,23 @@ export function App() {
           </span>
           {session && <span className="muted">session {session.id}</span>}
           <span className="app-spacer" />
-          {nickname && (
-            <button className="app-me" onClick={() => setRenaming(true)}>
-              {nickname} (you)
-            </button>
-          )}
+          <span className="presence">
+            {nickname && (
+              <button className="app-me" onClick={() => setRenaming(true)}>
+                {nickname} (you)
+              </button>
+            )}
+            {others.map((p) => (
+              <span
+                key={p.clientId}
+                className="presence-person"
+                title={p.path ?? ""}
+              >
+                <span className="avatar">{initials(p.nickname)}</span>
+                {p.nickname}
+              </span>
+            ))}
+          </span>
         </header>
         {session?.readOnly && (
           <div className="banner">
@@ -79,6 +142,7 @@ export function App() {
                 files={files}
                 selected={docPath}
                 badges={openCounts}
+                viewers={viewers}
                 onSelect={openDoc}
               />
             )}

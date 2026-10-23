@@ -81,6 +81,32 @@ body {
   cursor: pointer;
 }
 
+.presence {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.presence-person {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.avatar {
+  display: inline-grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--muted);
+  color: var(--bg);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
 .banner {
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border);
