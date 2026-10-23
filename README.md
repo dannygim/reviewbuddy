@@ -53,8 +53,16 @@ akapen listens on `127.0.0.1` by default. The recommended way to share it is [`t
 
 ```sh
 akapen --port 4400      # a fixed port, so the proxy keeps pointing at it
-tailscale serve 4400
+tailscale serve 4400    # https://<machine>.<tailnet>.ts.net/
 ```
+
+If `tailscale serve` answers `listener already exists for port 443`, this machine already serves something else on 443 (see `tailscale serve status`). Serve akapen on another HTTPS port instead:
+
+```sh
+tailscale serve --https=8443 4400    # https://<machine>.<tailnet>.ts.net:8443/
+```
+
+Don't use `--set-path` to put akapen under a sub-path: the app loads its API and assets from absolute paths.
 
 Alternatively, listen on all interfaces with `akapen --host 0.0.0.0` and share `http://<tailscale-ip>:4400/`. Over plain HTTP the browser's clipboard API is unavailable, so **Copy prompt** falls back to a dialog where you copy the text yourself. If you connect with a MagicDNS short name, add it to `server.allowed_hosts` in the config.
 

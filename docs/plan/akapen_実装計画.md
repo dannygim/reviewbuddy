@@ -133,7 +133,7 @@ v1 (v0.1.0) は次をすべて満たしたら完了とする。**2026-10-23 に�
 5. [x] v0.1.0 が GitHub Releases にあり、`mise exec github:dannygim/akapen@0.1.0 -- akapen --version` が `0.1.0` を出す (手元の Mac と、CI の macOS / Linux のランナーで確認。[M7 の結果](./M7_配布_詳細計画.md))
 6. [x] README に使い方・設定ファイル・`tailscale serve` での共有方法が書かれている
 
-残っている確認: `tailscale serve` 経由で WebSocket がつながるかは、tailnet の環境が要るため未確認 (R8)。
+`tailscale serve` 経由の WebSocket (R8) も 2026-10-23 に確認した ([ブラウザ制約_Tailscale_調査.md](../research/ブラウザ制約_Tailscale_調査.md))。
 
 ***
 
@@ -314,7 +314,7 @@ M1 以降の詳細計画は設計書を前提にするため、先に要件と�
 | R5 | mise のアセット自動判定と Gatekeeper の挙動が未検証 | リリースしても入らない・起動時に警告が出る | M0 の直後に v0.0.1 を private リポジトリでリリースし、M7 の検証項目を前倒しで潰す |
 | R6 | Shiki の全言語を含めるとバイナリが約 114MB になる | ダウンロードと起動が重い | M1 で `shiki/core` + 言語の絞り込みを測って決める |
 | R7 | Mermaid 12 で既定値の変更があり、`securityLevel: 'strict'` の扱いも未検証 | 図の崩れ・サニタイズ漏れ | M2 で v12 の変更点を確認してから組み込む |
-| R8 | `tailscale serve` 経由で WebSocket が通るか未検証 | リアルタイム更新が tailnet 越しに動かない | M4 で手動確認する。通らなければ README で `--host` での直接接続を案内する |
+| R8 | `tailscale serve` 経由で WebSocket が通るか未検証 | リアルタイム更新が tailnet 越しに動かない | 解消 (2026-10-23): 通ることを確認した。443 番が使用中の端末では `--https=8443` で別のポートに出す (README) |
 | R9 | 再アンカー (A2) の精度 | 誤った行にコメントが付く | 迷ったら Outdated に倒す (誤って付け替えるより安全)。代表的な編集パターンを単体テストにする |
 | R10 | サーバーと `akapen export` / `session` が同じ SQLite を同時に開く | `SQLITE_BUSY` | WAL + `busy_timeout` を設定する。書き込みはサーバー経由かロックの確認を挟む |
 | R11 | サブコマンド名 (`export` / `session` / `config`) と同名のディレクトリを開けない | `akapen export` がディレクトリとして解釈されない | `akapen ./export` で開けることを README に書く |

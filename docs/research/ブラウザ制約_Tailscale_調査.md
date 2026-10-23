@@ -35,7 +35,9 @@
 
 - `tailscale serve 4400` で、tailnet の DNS 名による HTTPS (証明書は自動発行。tailnet で HTTPS を有効にしておく必要がある) + localhost へのプロキシになる → 安全なコンテキストになり、`127.0.0.1` で待ち受けたまま共有できる **確認済** (Tailscale docs)
 - バックエンドへのリクエストに `Tailscale-User-Login` / `Tailscale-User-Name` / `Tailscale-User-Profile-Pic` を付ける。タグ付きのデバイスからのアクセスと Funnel 経由では付かない。クライアントが同じ名前のヘッダーを送ってきた場合は除去する (偽装対策) **確認済**
-- `tailscale serve` 経由で WebSocket が通るか: ドキュメントに記載なし **要検証**
+- `tailscale serve` 経由で WebSocket が通る **確認済** (2026-10-23、Tailscale 1.104.1、macOS。`tailscale serve --https=8443 <port>` の HTTPS 経由で `/api/health` と `/ws` の upgrade が通り、プレゼンスのイベントが届いた)
+- 同じ端末で 443 番をすでに別のサービスに使っていると、`tailscale serve <port>` は `listener already exists for port 443` で失敗する。`--https=<port>` で別の HTTPS ポートに出せる (`https://<マシン名>.<tailnet>.ts.net:<port>/`) **確認済** (実行)
+- `--set-path` でサブパスに出すと、akapen は `/api` や `/ws`・チャンクを絶対パスで読むため動かない (設計から判断。実行はしていない) **要検証**
 
 ***
 
@@ -45,7 +47,7 @@
 - **`client_id` は `crypto.getRandomValues()` で作る**
 - **推奨は `tailscale serve`**。HTTPS になり、`127.0.0.1` のまま共有できる。`--port` を明示したときに別のポートへ移らないのは、`tailscale serve 4400` が指す先をずらさないため ([CLI_仕様.md](../design/CLI_仕様.md))
 - **`Tailscale-User-Login` で Nickname を自動入力できる余地がある** (v1 で使うかは未決)
-- **WebSocket が `tailscale serve` を通るかは M4 で手動確認する**
+- **WebSocket は `tailscale serve` を通る**。443 番が使用中なら `--https=8443` などで別のポートに出す
 
 ***
 
