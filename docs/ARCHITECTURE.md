@@ -19,7 +19,7 @@ akapen は Bun の単一バイナリで動く CLI である。起動すると、
 | 保存先とセッション | `~/.config/akapen/sessions/<id>/` にセッションごとの `session.json` と SQLite | [ADR-0003](./adr/0003-session-storage.md) | [保存先とセッション.md](./design/保存先とセッション.md) / [データモデル.md](./design/データモデル.md) |
 | ファイル一覧の除外判定 | `git ls-files` に任せ、Git 管理外だけ `ignore` で判定する | [ADR-0004](./adr/0004-git-ls-files.md) | [ファイル一覧と表示.md](./design/ファイル一覧と表示.md) |
 | 配布 | GitHub Releases + mise の `github:` バックエンド | [ADR-0005](./adr/0005-distribution-mise-github.md) | [配布.md](./design/配布.md) |
-| セキュリティ | 認証なし。`Host` の許可リスト + トークン + WebSocket の `Origin` 検証 | [ADR-0006](./adr/0006-security-without-auth.md) | [セキュリティ.md](./design/セキュリティ.md) |
+| セキュリティ | 起動ごとの 6 桁の PIN と Cookie で閲覧を制限。加えて `Host` の許可リスト + 書き込みと WebSocket のトークン + WebSocket の `Origin` 検証 | [ADR-0007](./adr/0007-access-pin.md) (ADR-0006 を置き換え) | [セキュリティ.md](./design/セキュリティ.md) |
 
 ***
 

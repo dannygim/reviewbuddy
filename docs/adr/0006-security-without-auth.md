@@ -1,7 +1,8 @@
 # 0006. 認証なしのまま、Host の許可リストとトークンでブラウザ経由の攻撃を防ぐ
 
-- status: accepted
+- status: superseded
 - date: 2026-10-23
+- superseded_by: "0007"
 
 ## Context
 
