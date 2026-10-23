@@ -16,6 +16,7 @@ writeFileSync(
 
 let proc: Bun.Subprocess<"ignore", "pipe", "inherit">;
 let url: string;
+let pin: string;
 
 beforeAll(async () => {
   const build = Bun.spawnSync([process.execPath, "run", "build"], {
@@ -31,10 +32,12 @@ beforeAll(async () => {
   let output = "";
   for await (const chunk of proc.stdout) {
     output += new TextDecoder().decode(chunk);
-    if (output.includes("http://")) break;
+    if (/PIN: \d{3} \d{3}\n/.test(output)) break;
   }
   url = output.match(/http:\/\/127\.0\.0\.1:\d+\//)?.[0] ?? "";
+  pin = output.match(/PIN: (\d{3} \d{3})/)?.[1] ?? "";
   expect(url, output).not.toBe("");
+  expect(pin, output).not.toBe("");
 }, 60_000);
 
 afterAll(async () => {
@@ -48,9 +51,10 @@ test("the compiled binary prints its version", () => {
   expect(version.stdout.toString().trim()).toBe(VERSION);
 });
 
-test("the compiled binary serves the app", async () => {
+test("the compiled binary serves the app behind the PIN", async () => {
   const health = await fetch(new URL("/api/health", url)).then((r) => r.json());
   expect(health).toMatchObject({ name: "akapen", version: VERSION });
+  expect((await fetch(new URL("/api/tree", url))).status).toBe(401);
   const html = await fetch(url).then((r) => r.text());
   expect(html).toContain('<div id="root"></div>');
 });
@@ -70,6 +74,11 @@ test("the compiled binary loads Mermaid only for documents that use it", async (
     ) as Promise<number[]>;
   const sum = (sizes: number[]) => sizes.reduce((a, b) => a + b, 0);
 
+  // The login dialog itself is covered by test/e2e/login.test.ts.
+  await view.navigate(`${url}api/health`);
+  await view.evaluate(
+    `fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: "${pin}" }) })`,
+  );
   await view.navigate(`${url}#/doc/plain.md`);
   await waitFor(`!!document.querySelector(".markdown h1")`);
   const before = await scripts();

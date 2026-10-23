@@ -10,12 +10,30 @@ import type {
 
 let token = "";
 
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** 401: this browser has not entered the PIN of the running server. */
+export const needsPin = (error: unknown) =>
+  error instanceof ApiError && error.status === 401;
+
+async function apiError(res: Response): Promise<ApiError> {
+  const body = (await res.json().catch(() => null)) as ErrorResponse | null;
+  return new ApiError(
+    res.status,
+    body?.error ?? `${res.status} ${res.statusText}`,
+  );
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as ErrorResponse | null;
-    throw new Error(body?.error ?? `${res.status} ${res.statusText}`);
-  }
+  if (!res.ok) throw await apiError(res);
   return (await res.json()) as T;
 }
 
@@ -26,6 +44,16 @@ function send<T>(method: string, path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json", "X-Akapen-Token": token },
     body: JSON.stringify(body),
   });
+}
+
+/** Sets the access cookie (see docs/adr/0007-access-pin.md). */
+export async function login(pin: string): Promise<void> {
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+  if (!res.ok) throw await apiError(res);
 }
 
 export async function fetchSession(): Promise<SessionInfo> {

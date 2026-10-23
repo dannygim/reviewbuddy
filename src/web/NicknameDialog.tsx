@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const MAX_LENGTH = 50;
+export const MAX_NICKNAME_LENGTH = 50;
 
 type Props = {
   initial: string;
@@ -26,7 +26,7 @@ export function NicknameDialog({ initial, onSave, onCancel }: Props) {
           autoFocus
           name="nickname"
           value={name}
-          maxLength={MAX_LENGTH}
+          maxLength={MAX_NICKNAME_LENGTH}
           onChange={(event) => setName(event.target.value)}
         />
         <div className="dialog-actions">

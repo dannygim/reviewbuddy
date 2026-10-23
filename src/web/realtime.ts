@@ -5,6 +5,8 @@ type Options = {
   onEvent: (event: ServerEvent) => void;
   /** Called after a reconnect, to refetch what was missed while offline. */
   onReconnect: () => void;
+  /** Called when the connection is lost (the server may have restarted). */
+  onDisconnect: () => void;
 };
 
 const MAX_DELAY_MS = 10_000;
@@ -44,6 +46,7 @@ export function connectRealtime(options: Options): () => void {
     ws.onclose = () => {
       if (socket === ws) socket = null;
       if (stopped) return;
+      options.onDisconnect();
       timer = setTimeout(open, delay);
       delay = Math.min(delay * 2, MAX_DELAY_MS);
     };

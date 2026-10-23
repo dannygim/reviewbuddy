@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { AccessGate, formatPin } from "./auth";
 import {
   type Command,
   parseCliArgs,
@@ -100,6 +101,11 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
     },
     reload: () => readSession(home, meta.id),
   };
+  const access = new AccessGate(undefined, () =>
+    console.error(
+      "akapen: too many wrong PINs; restart akapen to get a new PIN.",
+    ),
+  );
   const host = command.host ?? config.server.host;
   const server = startServer({
     root,
@@ -114,6 +120,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
     resolveOnCopy: config.prompt.resolveOnCopy,
     session,
     watch: command.watch,
+    access,
   });
 
   writeLock(dir, {
@@ -129,6 +136,7 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
 
   console.log(`akapen ${VERSION} is reviewing ${root}`);
   console.log(`  ${server.url}`);
+  console.log(`  PIN: ${formatPin(access.pin)}`);
   if (readOnly)
     console.log(`  Session ${meta.id} has ended; comments are read-only.`);
   if (open) openBrowser(server.url.href);

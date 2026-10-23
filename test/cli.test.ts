@@ -31,7 +31,7 @@ async function startCli(...args: string[]) {
   let output = "";
   for await (const chunk of proc.stdout) {
     output += new TextDecoder().decode(chunk);
-    if (output.includes("http://")) break;
+    if (/PIN: \d{3} \d{3}\n/.test(output)) break;
   }
   return { proc, output, url: output.match(/http:\/\/\S+/)?.[0] ?? "" };
 }
@@ -47,6 +47,7 @@ test("a second start for the same directory points at the running server", async
   const first = await startCli(root, "--port", "0");
   try {
     expect(first.url).not.toBe("");
+    expect(first.output).toMatch(/\n {2}PIN: \d{3} \d{3}\n/);
     expect(existsSync(lockPath())).toBe(true);
 
     const second = Bun.spawnSync([process.execPath, cli, root], { env });

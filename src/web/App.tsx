@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionInfo } from "../shared/api";
 import type { ServerEvent } from "../shared/events";
-import { endSession, fetchSession, fetchThreads, fetchTree } from "./api";
+import {
+  endSession,
+  fetchSession,
+  fetchThreads,
+  fetchTree,
+  needsPin,
+} from "./api";
 import { type Reviewer, ReviewerContext } from "./context";
 import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree } from "./FileTree";
 import { bumpFileVersion } from "./fileVersions";
 import { clientId, useNickname } from "./identity";
+import { LoginDialog } from "./LoginDialog";
 import { NicknameDialog } from "./NicknameDialog";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
 import { announce, announceView, connectRealtime } from "./realtime";
@@ -19,6 +26,7 @@ export function App() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [files, setFiles] = useState<string[] | null>(null);
   const [error, setError] = useState(false);
+  const [locked, setLocked] = useState(false);
   const [nickname, setNickname] = useNickname();
   const [renaming, setRenaming] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -34,14 +42,27 @@ export function App() {
     threadStore.replaceAll(threads);
   }, []);
 
+  // A 401 asks for the PIN; dropping the session also stops the WebSocket.
+  const lock = useCallback(() => {
+    setSession(null);
+    setLocked(true);
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const session = await fetchSession();
+      await refetch();
+      setLocked(false);
+      setSession(session);
+    } catch (error) {
+      if (needsPin(error)) lock();
+      else setError(true);
+    }
+  }, [refetch, lock]);
+
   useEffect(() => {
-    fetchSession()
-      .then(async (session) => {
-        await refetch();
-        setSession(session);
-      })
-      .catch(() => setError(true));
-  }, [refetch]);
+    void load();
+  }, [load]);
 
   const token = session?.token;
   useEffect(() => {
@@ -85,8 +106,13 @@ export function App() {
       token,
       onEvent,
       onReconnect: () => void refetch(),
+      // After a restart the old cookie is unknown: ask for the new PIN.
+      onDisconnect: () =>
+        void fetchSession().catch((error) => {
+          if (needsPin(error)) lock();
+        }),
     });
-  }, [token, refetch]);
+  }, [token, refetch, lock]);
 
   useEffect(() => {
     if (nickname) announce(nickname, clientId);
@@ -133,7 +159,9 @@ export function App() {
           <span className="app-root" title={session?.root}>
             {error
               ? "Cannot reach the akapen server."
-              : (session?.rootDisplay ?? "Connecting…")}
+              : locked
+                ? "Enter the PIN to join."
+                : (session?.rootDisplay ?? "Connecting…")}
           </span>
           {session && (
             <span className="app-session muted">session {session.id}</span>
@@ -196,7 +224,8 @@ export function App() {
           </aside>
           <main className="app-main">
             {docPath ? (
-              <Viewer key={docPath} path={docPath} />
+              // Loaded only once the PIN was accepted.
+              session && <Viewer key={docPath} path={docPath} />
             ) : (
               <p className="viewer-note">Select a file to start reviewing.</p>
             )}
@@ -219,6 +248,15 @@ export function App() {
           onEnd={async () => {
             setSession(await endSession());
             setEnding(false);
+          }}
+        />
+      )}
+      {locked && (
+        <LoginDialog
+          initialNickname={nickname ?? ""}
+          onJoin={(name) => {
+            setNickname(name);
+            void load();
           }}
         />
       )}

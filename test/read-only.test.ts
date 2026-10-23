@@ -57,11 +57,20 @@ test("starting, reading, commenting, exporting and ending leave the directory un
     let output = "";
     for await (const chunk of server.stdout) {
       output += new TextDecoder().decode(chunk);
-      if (output.includes("http://")) break;
+      if (/PIN: \d{3} \d{3}\n/.test(output)) break;
     }
     const url = output.match(/http:\/\/\S+/)![0];
+    const pin = output.match(/PIN: (\d{3} \d{3})/)![1];
+    const login = await fetch(new URL("/api/login", url), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
     const get = (path: string) =>
-      fetch(new URL(path, url)).then((r) => r.json());
+      fetch(new URL(path, url), { headers: { Cookie: cookie } }).then((r) =>
+        r.json(),
+      );
     const { token } = (await get("/api/session")) as { token: string };
     const post = (path: string, body: unknown) =>
       fetch(new URL(path, url), {
@@ -69,6 +78,7 @@ test("starting, reading, commenting, exporting and ending leave the directory un
         headers: {
           "Content-Type": "application/json",
           "X-Akapen-Token": token,
+          Cookie: cookie,
         },
         body: JSON.stringify(body),
       }).then((r) => r.json());
