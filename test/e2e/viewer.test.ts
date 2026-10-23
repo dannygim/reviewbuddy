@@ -60,7 +60,7 @@ test("opens a file from the tree and reflects it in the URL", async () => {
 test("opens the file named in the URL hash and reveals it in the tree", async () => {
   await using view = new Bun.WebView({ width: 1000, height: 700 });
   await view.navigate(new URL("/#/doc/doc/A.md", server.url).href);
-  await waitFor(view, `document.querySelectorAll(".code tr").length === 3`);
+  await waitFor(view, `!!document.querySelector(".markdown h1")`);
   expect(
     await view.evaluate(
       `document.querySelector('[data-path="doc/A.md"]').getAttribute("aria-current")`,

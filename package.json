@@ -10,8 +10,10 @@
     "verify": "bun check && bun fmt --check src test && bun test"
   },
   "dependencies": {
+    "dompurify": "3.4.17",
     "ignore": "7.0.13",
     "markdown-it": "15.0.3",
+    "mermaid": "12.2.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "shiki": "4.5.0"
