@@ -333,6 +333,17 @@ button.primary {
   color: #ffffff;
 }
 
+button.danger {
+  border-color: var(--danger) !important;
+  background: var(--danger) !important;
+  color: #ffffff;
+}
+
+.dialog code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;

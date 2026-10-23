@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionInfo } from "../shared/api";
 import type { ServerEvent } from "../shared/events";
-import { fetchSession, fetchThreads, fetchTree } from "./api";
+import { endSession, fetchSession, fetchThreads, fetchTree } from "./api";
 import { type Reviewer, ReviewerContext } from "./context";
+import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree } from "./FileTree";
 import { clientId, useNickname } from "./identity";
 import { NicknameDialog } from "./NicknameDialog";
@@ -20,6 +21,7 @@ export function App() {
   const [nickname, setNickname] = useNickname();
   const [renaming, setRenaming] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [ending, setEnding] = useState(false);
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
@@ -39,8 +41,9 @@ export function App() {
       .catch(() => setError(true));
   }, [refetch]);
 
+  const token = session?.token;
   useEffect(() => {
-    if (!session) return;
+    if (!token) return;
     const onEvent = (event: ServerEvent) => {
       switch (event.type) {
         case "presence.changed":
@@ -56,14 +59,17 @@ export function App() {
         case "tree.changed":
           void fetchTree().then((tree) => setFiles(tree.files));
           break;
+        case "session.ended":
+          setSession((s) => s && { ...s, status: "ended", readOnly: true });
+          break;
       }
     };
     return connectRealtime({
-      token: session.token,
+      token,
       onEvent,
       onReconnect: () => void refetch(),
     });
-  }, [session, refetch]);
+  }, [token, refetch]);
 
   useEffect(() => {
     if (nickname) announce(nickname, clientId);
@@ -124,6 +130,15 @@ export function App() {
               Review ({threads.filter((t) => t.status === "open").length})
             </button>
           )}
+          {session && !session.readOnly && (
+            <button
+              className="app-review"
+              data-action="end-session"
+              onClick={() => setEnding(true)}
+            >
+              End
+            </button>
+          )}
           <span className="presence">
             {nickname && (
               <button className="app-me" onClick={() => setRenaming(true)}>
@@ -174,6 +189,19 @@ export function App() {
           )}
         </div>
       </div>
+      {ending && (
+        <EndSessionDialog
+          onCancel={() => setEnding(false)}
+          onReview={() => {
+            setEnding(false);
+            setReviewing(true);
+          }}
+          onEnd={async () => {
+            setSession(await endSession());
+            setEnding(false);
+          }}
+        />
+      )}
       {(askNickname || renaming) && (
         <NicknameDialog
           initial={nickname ?? ""}

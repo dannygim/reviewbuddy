@@ -77,3 +77,6 @@ export const requestPrompt = (
   author: string,
 ) =>
   send<PromptResponse>("POST", "/api/prompt", { threadIds, resolve, author });
+
+export const endSession = () =>
+  send<SessionInfo>("POST", "/api/session/end", {});

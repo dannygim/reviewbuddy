@@ -21,6 +21,10 @@ export type SessionContext = {
   store: ReviewStore;
   /** Records activity; called after each successful write. */
   touch(): void;
+  /** Marks the session ended in session.json. */
+  end(): void;
+  /** Re-reads session.json, to notice `akapen session end` from outside. */
+  reload(): SessionMeta | null;
 };
 
 export type ServerOptions = {
@@ -36,6 +40,8 @@ export type ServerOptions = {
   prompt?: PromptOptions;
   /** Default of "Resolve copied threads" in the Review panel. */
   resolveOnCopy?: boolean;
+  /** How often to re-read session.json (default 5 s). */
+  sessionPollMs?: number;
 };
 
 export type AppServer = Bun.Server<SocketData>;
@@ -119,6 +125,32 @@ function listen(options: ServerOptions, port: number): AppServer {
       }
     });
 
+  const sessionInfo = (): SessionInfo => ({
+    id: session.meta.id,
+    root,
+    status: session.meta.status,
+    readOnly: session.readOnly,
+    token: session.token,
+    resolveOnCopy: options.resolveOnCopy ?? false,
+    prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
+  });
+
+  const markEnded = () => {
+    session.readOnly = true;
+    hub.publish({ type: "session.ended" });
+  };
+
+  // `akapen session end` only edits session.json; notice it within seconds.
+  const poll = setInterval(() => {
+    if (session.readOnly) return;
+    const latest = session.reload();
+    if (latest?.status === "ended") {
+      session.meta = latest;
+      markEnded();
+    }
+  }, options.sessionPollMs ?? 5000);
+  poll.unref();
+
   const fileFrom = (req: Request) => {
     const path = new URL(req.url).searchParams.get("path") ?? "";
     return { path, abs: resolveFile(root, files, path) };
@@ -132,17 +164,14 @@ function listen(options: ServerOptions, port: number): AppServer {
     routes: {
       "/": index,
       "/api/health": guard(() => Response.json(health)),
-      "/api/session": guard(() =>
-        Response.json({
-          id: session.meta.id,
-          root,
-          status: session.meta.status,
-          readOnly: session.readOnly,
-          token: session.token,
-          resolveOnCopy: options.resolveOnCopy ?? false,
-          prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
-        } satisfies SessionInfo),
-      ),
+      "/api/session": guard(() => Response.json(sessionInfo())),
+      "/api/session/end": {
+        POST: write(() => {
+          session.end();
+          markEnded();
+          return Response.json(sessionInfo());
+        }),
+      },
       "/api/tree": guard(() =>
         Response.json({ files: files.paths() } satisfies TreeResponse),
       ),

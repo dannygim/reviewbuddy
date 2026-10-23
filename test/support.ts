@@ -27,6 +27,16 @@ export function testSession(
     token: TEST_TOKEN,
     store: new ReviewStore(openReviewDb(join(dir, "review.db"))),
     touch() {},
+    end() {
+      this.meta = {
+        ...this.meta,
+        status: "ended",
+        endedAt: "2026-10-23T16:00:00+09:00",
+      };
+    },
+    reload() {
+      return this.meta;
+    },
   };
 }
 

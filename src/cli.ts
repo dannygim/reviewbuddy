@@ -34,9 +34,11 @@ import { findRunningServer, removeLock, writeLock } from "./session/lock";
 import {
   localIso,
   openSession,
+  readSession,
   SessionError,
   sessionDir,
   touchSession,
+  writeSession,
 } from "./session/session";
 import { VERSION } from "./version";
 
@@ -84,8 +86,19 @@ async function serve(command: ServeCommand, home: string): Promise<void> {
     ),
     store: new ReviewStore(openReviewDb(join(dir, "review.db"))),
     touch() {
+      // Never write back "active" over an end from `akapen session end`.
+      if (readSession(home, meta.id)?.status === "ended") return;
       session.meta = touchSession(home, session.meta);
     },
+    end() {
+      session.meta = {
+        ...session.meta,
+        status: "ended",
+        endedAt: localIso(new Date()),
+      };
+      writeSession(home, session.meta);
+    },
+    reload: () => readSession(home, meta.id),
   };
   const host = command.host ?? config.server.host;
   const server = startServer({
