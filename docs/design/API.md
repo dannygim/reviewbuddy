@@ -28,11 +28,11 @@
 | `POST /api/threads/:id/reopen` | Reopen する | ○ | M3 |
 | `POST /api/prompt` | 指定したスレッドのプロンプトを生成する。`exported_at` を記録し、指定があれば Resolve する | ○ | M5 |
 
-- 書き込みは `Content-Type: application/json` と `X-Akapen-Token` が必須
+- 書き込みは `Content-Type: application/json` と `X-Reviewbuddy-Token` が必須
 - 終了したセッション (read-only) では、書き込みはすべて `409` を返す
 - 自分のもの以外のコメントの編集・削除は `403` を返す (`client_id` で判定する信頼ベースの簡易な制御)
 - エラーの応答は `{ "error": "<人が読める英語のメッセージ>" }`
-- Cookie が無いときの `401` は `{ "error": "Enter the PIN shown where akapen was started." }`
+- Cookie が無いときの `401` は `{ "error": "Enter the PIN shown where reviewbuddy was started." }`
 
 ***
 

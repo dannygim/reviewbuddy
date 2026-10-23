@@ -1,6 +1,6 @@
 # mise での配布 調査
 
-**目的: akapen の単一バイナリを mise で入れられるようにするために、mise のバックエンド・registry の登録条件・private リポジトリでの利用条件を確認日付きで記録する。**
+**目的: reviewbuddy の単一バイナリを mise で入れられるようにするために、mise のバックエンド・registry の登録条件・private リポジトリでの利用条件を確認日付きで記録する。**
 
 ***
 
@@ -32,7 +32,7 @@
 
 - 「新しい短縮名は広く使われているツール向け。通常は数千の GitHub スター、継続的なメンテナンス、作者以外のプロジェクトでの実利用」。動くだけでは不十分で、多くの提案は却下される **確認済**
 - バックエンドの受け入れ段階: Tier 1 = `packslip` (署名マニフェストを公開している場合) / Tier 2 = `aqua` / `github` / `gitlab` / Tier 3 = `conda` / Tier 4 = `npm` / `pypi` / `gem` / `cargo` / `go` / `dotnet` (事前に jdx の合意が必要) / 受け付けない = `asdf` / `vfox` / `ubi` **確認済**
-- 形式: `registry/<name>.toml` に 1 ツール 1 ファイル。`backends` と `version_order` が必須。新規は `test = { cmd = "akapen --version", expected = "{{version}}" }` も必須 (CI の `mise test-tool` で検証する) **確認済**
+- 形式: `registry/<name>.toml` に 1 ツール 1 ファイル。`backends` と `version_order` が必須。新規は `test = { cmd = "reviewbuddy --version", expected = "{{version}}" }` も必須 (CI の `mise test-tool` で検証する) **確認済**
 
 ### private リポジトリでの利用
 
@@ -48,7 +48,7 @@
 
 - mise 2026.10 の `minimum_release_age` は既定で `24h`。公開から 24 時間たっていない版は、`latest` や `0.1` のような範囲の指定を解決するときに飛ばされる。`mise upgrade` は「no versions found ... matching minimum_release_age (24h)」と警告して何もしない **確認済** (2026-10-23、mise 2026.10.17。v0.1.1 の公開直後に発生)
 - `@0.1.1` のように版を明示した場合は対象外 (リリースのスモークテストが通ったのはこのため) **確認済**
-- その場で上げるには `mise upgrade <tool> --minimum-release-age 0s`、特定のツールを外すには `minimum_release_age_excludes` に完全なバックエンド ID (`github:dannygim/akapen`) を足す (`mise settings add minimum_release_age_excludes github:dannygim/akapen`) **確認済** (前者は実行、後者はドキュメント)
+- その場で上げるには `mise upgrade <tool> --minimum-release-age 0s`、特定のツールを外すには `minimum_release_age_excludes` に完全なバックエンド ID (`github:dannygim/reviewbuddy`) を足す (`mise settings add minimum_release_age_excludes github:dannygim/reviewbuddy`) **確認済** (前者は実行、後者はドキュメント)
 - GitHub の artifact attestation は、Free / Pro / Team では public リポジトリのみ。private / internal は GitHub Enterprise Cloud が必要 **確認済** (GitHub Docs)
 
 ### 未確認の事項
@@ -62,7 +62,7 @@
 
 ## 重要な気づき
 
-- **`mise use akapen` の短縮名は当面狙えない**。登録条件が「数千スター級」のため、`github:<owner>/akapen` の完全名で配る
+- **`mise use reviewbuddy` の短縮名は当面狙えない**。登録条件が「数千スター級」のため、`github:<owner>/reviewbuddy` の完全名で配る
 - **`github:` バックエンドなら、Release に OS / arch 別のアーカイブを置くだけで入る**。利用者側に Bun は要らない
 - **private のままでも自分は使える**。gh で `gh auth login` 済みなら、mise は gh の `hosts.yml` を読む。ただし期限切れの `GITHUB_TOKEN` などが環境変数に残っていると、先にそちらが使われて失敗する
 - **private の間は artifact attestation を付けられない** (GitHub Enterprise Cloud が必要)。checksum の検証は効く

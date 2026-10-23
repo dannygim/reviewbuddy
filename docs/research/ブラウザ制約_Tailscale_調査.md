@@ -1,6 +1,6 @@
 # ブラウザの制約と Tailscale 経由のアクセス 調査
 
-**目的: tailnet 内の同僚が akapen にアクセスするときに効いてくるブラウザの制約 (安全なコンテキスト) と、`tailscale serve` の挙動を確認日付きで記録する。**
+**目的: tailnet 内の同僚が reviewbuddy にアクセスするときに効いてくるブラウザの制約 (安全なコンテキスト) と、`tailscale serve` の挙動を確認日付きで記録する。**
 
 ***
 
@@ -15,7 +15,7 @@
 
 - 調査日: 2026-10-23
 - 凡例: **確認済** = 公式ドキュメントで確認したもの / **要検証** = 記載がなく未確認のもの
-- akapen は既定で `127.0.0.1:4400` で待ち受ける。リモートからの共有の手段はツールの責務外とし、README で `tailscale serve` を案内する ([全体設計.md](../design/全体設計.md))
+- reviewbuddy は既定で `127.0.0.1:4400` で待ち受ける。リモートからの共有の手段はツールの責務外とし、README で `tailscale serve` を案内する ([全体設計.md](../design/全体設計.md))
 
 ***
 
@@ -23,7 +23,7 @@
 
 ### 安全なコンテキストが必要な API
 
-| API | 制約 | 確度 | akapen での影響 |
+| API | 制約 | 確度 | reviewbuddy での影響 |
 |-----|------|------|----------------|
 | `navigator.clipboard` (Clipboard API) | メソッドはすべて安全なコンテキストが必須 | 確認済 (MDN) | プロンプトのコピーにフォールバックが要る |
 | `crypto.randomUUID()` | 安全なコンテキスト限定 | 確認済 (MDN) | `client_id` の生成に使えない |
@@ -37,7 +37,7 @@
 - バックエンドへのリクエストに `Tailscale-User-Login` / `Tailscale-User-Name` / `Tailscale-User-Profile-Pic` を付ける。タグ付きのデバイスからのアクセスと Funnel 経由では付かない。クライアントが同じ名前のヘッダーを送ってきた場合は除去する (偽装対策) **確認済**
 - `tailscale serve` 経由で WebSocket が通る **確認済** (2026-10-23、Tailscale 1.104.1、macOS。`tailscale serve --https=8443 <port>` の HTTPS 経由で `/api/health` と `/ws` の upgrade が通り、プレゼンスのイベントが届いた)
 - 同じ端末で 443 番をすでに別のサービスに使っていると、`tailscale serve <port>` は `listener already exists for port 443` で失敗する。`--https=<port>` で別の HTTPS ポートに出せる (`https://<マシン名>.<tailnet>.ts.net:<port>/`) **確認済** (実行)
-- `--set-path` でサブパスに出すと、akapen は `/api` や `/ws`・チャンクを絶対パスで読むため動かない (設計から判断。実行はしていない) **要検証**
+- `--set-path` でサブパスに出すと、reviewbuddy は `/api` や `/ws`・チャンクを絶対パスで読むため動かない (設計から判断。実行はしていない) **要検証**
 - 前面モード (`--bg` なし) の `tailscale serve` を SIGTERM で止めると、設定が `Foreground` のエントリとして残り、同じポートに `listener already exists for port <port>` で出せなくなることがある。`tailscale serve status` には出ず、`--json` で見える。`tailscale serve --https=<port> off` では消えず、消せたのは `tailscale serve reset` (他の設定も消える) だけだった **確認済** (2026-10-23、Tailscale 1.104.1、macOS で観測)。止めるときは Ctrl+C を使うか、`--bg` で出して `--https=<port> off` で外す
 
 ### Tailscale を使っていない相手への共有

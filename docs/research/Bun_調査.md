@@ -1,6 +1,6 @@
 # Bun 調査
 
-**目的: akapen が依存する Bun 1.4 の機能 (サーバー、単一バイナリ、SQLite、TOML、組み込みの開発ツール) の仕様と制約を、確認日付きで記録する。**
+**目的: reviewbuddy が依存する Bun 1.4 の機能 (サーバー、単一バイナリ、SQLite、TOML、組み込みの開発ツール) の仕様と制約を、確認日付きで記録する。**
 
 ***
 
@@ -65,7 +65,7 @@
 - `--bytecode` の出力は、`--format` を省略すると CommonJS になる。ESM のバイトコードは `--compile` と `--format=esm` の両方が必要。バイトコードは Bun のバージョン間で互換性がない **確認済** (`@types/bun` 1.4.4 同梱のドキュメント)
 - バイナリのサイズ: HTML import + Shiki + WebSocket の最小サーバーで約 114MB (Linux x64、Shiki の全言語・テーマを含む)。M0 の時点 (React のみ、Shiki なし) では約 92MB (macOS arm64) **確認済** (実行)
 - サイズ削減: `shiki/core` + Oniguruma エンジン + 使う言語 (約 40) だけを読み込むと、M1 のバイナリは `--minify --sourcemap` で 101MB (macOS arm64)。WASM も単一バイナリの中で動く **確認済** (実行)
-- `--bytecode` の効果 (M1 のバイナリ、macOS arm64): サイズが 101.0MB → 112.4MB に増え、起動 (URL を出すまで) は 35ms → 22ms になる **確認済** (実行)。akapen では付けない ([M1_ツリーとコード表示_詳細計画.md](../plan/M1_ツリーとコード表示_詳細計画.md) の計測結果)
+- `--bytecode` の効果 (M1 のバイナリ、macOS arm64): サイズが 101.0MB → 112.4MB に増え、起動 (URL を出すまで) は 35ms → 22ms になる **確認済** (実行)。reviewbuddy では付けない ([M1_ツリーとコード表示_詳細計画.md](../plan/M1_ツリーとコード表示_詳細計画.md) の計測結果)
 - macOS の署名: ドキュメントは `codesign` での署名と、JIT 権限を含む `entitlements.plist` の付与を推奨している (v1.2.4+)。Linux からクロスコンパイルした darwin バイナリを Linux 上で署名できるかは記載なし → darwin 版は macOS ランナーでビルド・署名する **確認済** (記載内容) / mise 経由のダウンロードで Gatekeeper の警告が出ないこと **要検証**
 
 ### bun:sqlite
@@ -101,7 +101,7 @@
 ## 重要な気づき
 
 - **Bun.markdown はソース位置を返さない**ため、Preview 上で行にひも付くコメントを付ける要件と合わない。v1 では markdown-it を使う ([レンダリング_調査.md](./レンダリング_調査.md))
-- **コンパイルしたバイナリは、何も指定しないと実行時のカレントディレクトリの `.env` を読む**。akapen はレビュー対象のディレクトリで起動されるため、対象プロジェクトの秘密情報が akapen の環境変数に入りうる。ビルドには `--no-compile-autoload-dotenv --no-compile-autoload-bunfig` を必ず付ける
+- **コンパイルしたバイナリは、何も指定しないと実行時のカレントディレクトリの `.env` を読む**。reviewbuddy はレビュー対象のディレクトリで起動されるため、対象プロジェクトの秘密情報が reviewbuddy の環境変数に入りうる。ビルドには `--no-compile-autoload-dotenv --no-compile-autoload-bunfig` を必ず付ける
 - **`bun check` / `bun fmt` が組み込まれている**ため、`typescript` や Biome / Prettier を開発用の依存に入れずに済む。ただし `bun fmt` の対象は `src` / `test` に限り、スクリプト名に `check` / `fmt` を使わない
 - **`fs.watch` の recursive の挙動は未検証**。ファイル監視 (A1) を作る M6 の最初に確認する
 
