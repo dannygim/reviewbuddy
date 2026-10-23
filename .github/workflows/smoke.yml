@@ -1,0 +1,43 @@
+name: Smoke test
+
+# Installs a released version with mise, as users do, and checks that it runs.
+# Called by the release workflow; can also be run by hand for any version.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to install, e.g. 0.1.0 (a leading "v" is ignored)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to install, e.g. 0.1.0 (a leading "v" is ignored)
+        required: true
+
+permissions:
+  contents: read
+  # mise verifies GitHub artifact attestations through the API.
+  attestations: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+      - name: Install with mise and run
+        env:
+          # The repository is private; the workflow token can read its releases.
+          MISE_GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#v}"
+          actual="$(mise exec "github:${GITHUB_REPOSITORY}@${version}" -- akapen --version)"
+          echo "akapen --version: $actual"
+          test "$actual" = "$version"

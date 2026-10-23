@@ -54,20 +54,9 @@ jobs:
 
   smoke:
     needs: release
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: jdx/mise-action@v5
-        with:
-          install: false
-      - name: Install with mise and run
-        env:
-          # The repository is private; the workflow token can read its releases.
-          MISE_GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          actual="$(mise exec "github:${GITHUB_REPOSITORY}@${version}" -- akapen --version)"
-          echo "akapen --version: $actual"
-          test "$actual" = "$version"
+    permissions:
+      contents: read
+      attestations: read
+    uses: ./.github/workflows/smoke.yml
+    with:
+      version: ${{ github.ref_name }}
