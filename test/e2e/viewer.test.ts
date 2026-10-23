@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
-import { testSession } from "../support";
+import { testSession, webView } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-e2e-")));
 mkdirSync(join(root, "doc"));
@@ -48,7 +48,7 @@ async function waitFor(view: Bun.WebView, expression: string): Promise<void> {
 }
 
 test("opens a file from the tree and reflects it in the URL", async () => {
-  await using view = new Bun.WebView({ width: 1000, height: 700 });
+  await using view = webView({ width: 1000, height: 700 });
   await view.navigate(server.url.href);
   await view.click('[data-path="src"]');
   await view.click('[data-path="src/main.ts"]');
@@ -63,7 +63,7 @@ test("opens a file from the tree and reflects it in the URL", async () => {
 }, 30_000);
 
 test("opens the file named in the URL hash and reveals it in the tree", async () => {
-  await using view = new Bun.WebView({ width: 1000, height: 700 });
+  await using view = webView({ width: 1000, height: 700 });
   await view.navigate(new URL("/#/doc/doc/A.md", server.url).href);
   await waitFor(view, `!!document.querySelector(".markdown h1")`);
   // The tree loads in parallel with the file, so wait for it separately.

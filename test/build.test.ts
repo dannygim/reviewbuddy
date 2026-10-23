@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { VERSION } from "../src/version";
+import { webView } from "./support";
 
 const projectDir = join(import.meta.dir, "..");
 const binary = join(projectDir, "dist", "akapen");
@@ -55,7 +56,7 @@ test("the compiled binary serves the app", async () => {
 });
 
 test("the compiled binary loads Mermaid only for documents that use it", async () => {
-  await using view = new Bun.WebView({ width: 1000, height: 700 });
+  await using view = webView({ width: 1000, height: 700 });
   const waitFor = async (expression: string) => {
     const deadline = Date.now() + 15_000;
     while (!(await view.evaluate(expression))) {

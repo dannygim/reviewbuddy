@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
-import { testSession } from "../support";
+import { testSession, webView } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-comments-")));
 mkdirSync(join(root, "src"));
@@ -57,7 +57,7 @@ const text = (view: Bun.WebView, selector: string) =>
   );
 
 test("comments on source lines, then replies and resolves", async () => {
-  await using view = new Bun.WebView({ width: 1100, height: 800 });
+  await using view = webView({ width: 1100, height: 800 });
   await view.navigate(new URL("/#/doc/src/app.ts", server.url).href);
 
   // First visit: pick a nickname.

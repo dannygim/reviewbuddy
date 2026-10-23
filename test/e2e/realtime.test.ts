@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
-import { testSession } from "../support";
+import { testSession, webView } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "akapen-realtime-")));
 mkdirSync(join(root, "doc"));
@@ -62,7 +62,7 @@ async function joinAs(
   path: string,
   host = "127.0.0.1",
 ): Promise<Bun.WebView> {
-  const view = new Bun.WebView({ width: 1100, height: 800 });
+  const view = webView({ width: 1100, height: 800 });
   const origin = `http://${host}:${server.port}`;
   await view.navigate(`${origin}/api/health`);
   await view.evaluate("localStorage.clear()");
@@ -107,10 +107,24 @@ test("comments and presence reach the other browser without a reload", async () 
   ).toBe("1");
 }, 60_000);
 
-const hover = (view: Bun.WebView, selector: string) =>
-  view.evaluate(
-    `document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))`,
+/**
+ * Hovers a block and waits until the "+" button sits next to it (React
+ * renders mousemove updates asynchronously).
+ */
+async function hover(view: Bun.WebView, selector: string): Promise<void> {
+  const block = `document.querySelector(${JSON.stringify(selector)})`;
+  await view.evaluate(
+    `${block}.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))`,
   );
+  await waitFor(
+    view,
+    `(() => {
+      const plus = document.querySelector(".block-add");
+      if (!plus) return false;
+      return Math.abs(plus.getBoundingClientRect().top - ${block}.getBoundingClientRect().top) < 1;
+    })()`,
+  );
+}
 
 test("comments on Preview blocks show under the block and in the source", async () => {
   await using view = await joinAs("Carol", "doc/guide.md");

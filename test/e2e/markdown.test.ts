@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
-import { testSession } from "../support";
+import { testSession, webView } from "../support";
 
 const GUIDE = [
   "# Guide",
@@ -73,7 +73,7 @@ async function waitFor(view: Bun.WebView, expression: string): Promise<void> {
 }
 
 async function open(path: string): Promise<Bun.WebView> {
-  const view = new Bun.WebView({ width: 1000, height: 800 });
+  const view = webView({ width: 1000, height: 800 });
   await view.navigate(new URL(`/#/doc/${path}`, server.url).href);
   await waitFor(view, `!!document.querySelector(".markdown h1")`);
   return view;

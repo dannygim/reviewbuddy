@@ -29,3 +29,13 @@ export function testSession(
     touch() {},
   };
 }
+
+/**
+ * A headless browser view. Set AKAPEN_E2E_BACKEND=chrome to run the E2E tests
+ * on Chrome locally, as they run on Linux in CI (macOS defaults to WebKit).
+ */
+export function webView(size: { width: number; height: number }): Bun.WebView {
+  const backend = process.env.AKAPEN_E2E_BACKEND as
+    "chrome" | "webkit" | undefined;
+  return new Bun.WebView(backend ? { ...size, backend } : size);
+}
