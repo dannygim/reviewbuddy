@@ -37,6 +37,12 @@ export type FileView =
     } & TextFields)
   | { kind: "image" | "binary"; path: string; mtime: number };
 
+export type PromptResponse = {
+  text: string;
+  /** The threads after recording the export (and resolving, if asked). */
+  threads: Thread[];
+};
+
 export type Comment = {
   id: string;
   threadId: string;

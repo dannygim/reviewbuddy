@@ -171,6 +171,20 @@ export class ReviewStore {
     return { deletedThreadId: threadId };
   }
 
+  /** Records that the threads were copied as a prompt (the "Sent" badge). */
+  markExported(ids: string[]): Thread[] {
+    for (const id of ids) this.getThread(id);
+    const now = this.timestamp();
+    this.db.transaction(() => {
+      for (const id of ids) {
+        this.db
+          .query("UPDATE threads SET exported_at = $now WHERE id = $id")
+          .run({ id, now });
+      }
+    })();
+    return ids.map((id) => this.getThread(id));
+  }
+
   resolve(id: string, by: string): Thread {
     this.getThread(id);
     this.db

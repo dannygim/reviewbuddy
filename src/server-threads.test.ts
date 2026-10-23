@@ -231,3 +231,57 @@ describe("write protection", () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe("prompt API", () => {
+  test("formats the threads, records the export and can resolve", async () => {
+    const first = await createThread([1, 1]);
+    const second = await createThread([3, 4]);
+    let res = await send("POST", "/api/prompt", {
+      threadIds: [second.id, first.id],
+      resolve: false,
+      author: "Bob",
+    });
+    expect(res.status).toBe(200);
+    let body = (await res.json()) as { text: string; threads: Thread[] };
+    expect(body.text).toBe(
+      "1. a.md:1\n  # A\n\n  Please fix by Alice\n\n2. a.md:3-4\n  one\n  two\n\n  Please fix by Alice\n",
+    );
+    expect(body.threads.map((t) => t.exportedAt !== null)).toEqual([
+      true,
+      true,
+    ]);
+    expect(body.threads.map((t) => t.status)).toEqual(["open", "open"]);
+
+    res = await send("POST", "/api/prompt", {
+      threadIds: [first.id],
+      resolve: true,
+      author: "Bob",
+    });
+    body = (await res.json()) as { text: string; threads: Thread[] };
+    expect(body.threads[0]).toMatchObject({
+      status: "resolved",
+      resolvedBy: "Bob",
+    });
+  });
+
+  test("rejects unknown or missing threads", async () => {
+    expect(
+      (
+        await send("POST", "/api/prompt", {
+          threadIds: ["nope"],
+          resolve: false,
+          author: "Bob",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await send("POST", "/api/prompt", {
+          threadIds: [],
+          resolve: false,
+          author: "Bob",
+        })
+      ).status,
+    ).toBe(400);
+  });
+});

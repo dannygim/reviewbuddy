@@ -1,8 +1,9 @@
 import type { FileIndex } from "../files/file-index";
 import { resolveFile } from "../files/resolve";
 import { type Handler, param } from "../http";
+import { formatPrompt, type PromptOptions } from "../prompt/format";
 import { isImagePath } from "../render/file-view";
-import type { Thread } from "../shared/api";
+import type { PromptResponse, Thread } from "../shared/api";
 import type { ServerEvent } from "../shared/events";
 import { anchorFor } from "./anchor";
 import { type Body, InputError, integer, oneOf, text } from "./input";
@@ -30,6 +31,7 @@ export function reviewRoutes(deps: {
   write: (handler: WriteHandler) => Handler;
   /** Broadcasts a change to every connected browser. */
   publish: (event: ServerEvent) => void;
+  prompt: PromptOptions;
 }) {
   const { root, files, store, guard, write, publish } = deps;
   const updated = (thread: Thread, status = 200) => {
@@ -111,6 +113,35 @@ export function reviewRoutes(deps: {
     },
     "/api/threads/:id/reopen": {
       POST: write((req) => updated(store.reopen(param(req, "id")))),
+    },
+    "/api/prompt": {
+      POST: write((_req, body) => {
+        const ids = body.threadIds;
+        if (
+          !Array.isArray(ids) ||
+          ids.length === 0 ||
+          !ids.every((id) => typeof id === "string")
+        ) {
+          throw new InputError("threadIds must be a non-empty list of IDs");
+        }
+        const author = text(body, "author", MAX_AUTHOR);
+        const prompt = formatPrompt(
+          ids.map((id) => store.getThread(id)),
+          deps.prompt,
+        );
+        let threads = store.markExported(ids);
+        if (body.resolve === true) {
+          threads = threads.map((t) =>
+            t.status === "open" ? store.resolve(t.id, author) : t,
+          );
+        }
+        for (const thread of threads)
+          publish({ type: "thread.updated", thread });
+        return Response.json({
+          text: prompt,
+          threads,
+        } satisfies PromptResponse);
+      }),
     },
   };
 }

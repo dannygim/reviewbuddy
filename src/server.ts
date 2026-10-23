@@ -1,6 +1,7 @@
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
 import { errorResponse, type Handler } from "./http";
+import { DEFAULT_PROMPT_OPTIONS, type PromptOptions } from "./prompt/format";
 import { Hub, type SocketData } from "./realtime/hub";
 import { isImagePath, renderFile } from "./render/file-view";
 import { type Body, InputError } from "./review/input";
@@ -31,6 +32,8 @@ export type ServerOptions = {
   allowedHosts: string[];
   maxHighlightBytes: number;
   session: SessionContext;
+  /** Defaults to an empty preamble and 30 anchor lines. */
+  prompt?: PromptOptions;
 };
 
 export type AppServer = Bun.Server<SocketData>;
@@ -162,6 +165,7 @@ function listen(options: ServerOptions, port: number): AppServer {
         guard,
         write,
         publish: (event) => hub.publish(event),
+        prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
       }),
     },
     fetch(req, server) {

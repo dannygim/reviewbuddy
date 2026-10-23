@@ -52,9 +52,21 @@ async function waitFor(view: Bun.WebView, expression: string): Promise<void> {
   throw new Error(`Timed out waiting for: ${expression}`);
 }
 
-async function joinAs(name: string, path: string): Promise<Bun.WebView> {
+/**
+ * Opens the app as a new participant. On Linux, Bun.WebView tabs share one
+ * Chrome profile, so each participant uses its own origin (host) and starts
+ * from empty storage to get its own nickname and client ID.
+ */
+async function joinAs(
+  name: string,
+  path: string,
+  host = "127.0.0.1",
+): Promise<Bun.WebView> {
   const view = new Bun.WebView({ width: 1100, height: 800 });
-  await view.navigate(new URL(`/#/doc/${path}`, server.url).href);
+  const origin = `http://${host}:${server.port}`;
+  await view.navigate(`${origin}/api/health`);
+  await view.evaluate("localStorage.clear()");
+  await view.navigate(`${origin}/#/doc/${path}`);
   await view.click(".dialog input");
   await view.type(name);
   await view.click('.dialog button[type="submit"]');
@@ -64,7 +76,7 @@ async function joinAs(name: string, path: string): Promise<Bun.WebView> {
 
 test("comments and presence reach the other browser without a reload", async () => {
   await using alice = await joinAs("Alice", "doc/notes.ts");
-  await using bob = await joinAs("Bob", "doc/notes.ts");
+  await using bob = await joinAs("Bob", "doc/notes.ts", "localhost");
 
   await waitFor(
     alice,
