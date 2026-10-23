@@ -4,8 +4,7 @@ export type TreeResponse = { files: string[] };
 
 export type ErrorResponse = { error: string };
 
-export type TextFileView = {
-  kind: "code" | "markdown" | "large";
+type TextFields = {
   path: string;
   mtime: number;
   lang: string;
@@ -16,4 +15,10 @@ export type TextFileView = {
 };
 
 export type FileView =
-  TextFileView | { kind: "image" | "binary"; path: string; mtime: number };
+  | ({ kind: "code" | "large" } & TextFields)
+  | ({
+      kind: "markdown";
+      /** Rendered Markdown; block elements carry data-src-start / data-src-end. */
+      previewHtml: string;
+    } & TextFields)
+  | { kind: "image" | "binary"; path: string; mtime: number };

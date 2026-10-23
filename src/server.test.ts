@@ -97,6 +97,14 @@ describe("file API", () => {
     });
   });
 
+  test("GET /api/file renders a Markdown preview", async () => {
+    const res = await get("/api/file?path=README.md");
+    expect(await res.json()).toMatchObject({
+      kind: "markdown",
+      previewHtml: '<h1 data-src-start="1" data-src-end="1">Hi</h1>\n',
+    });
+  });
+
   test("GET /api/file reports binary files", async () => {
     const res = await get("/api/file?path=x.dat");
     expect(await res.json()).toMatchObject({ kind: "binary", path: "x.dat" });

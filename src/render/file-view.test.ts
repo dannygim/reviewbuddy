@@ -39,6 +39,10 @@ describe("renderFile", () => {
       lang: "markdown",
       lines: ["# Hi"],
     });
+    if (view.kind !== "markdown") throw new Error("unreachable");
+    expect(view.previewHtml).toContain(
+      '<h1 data-src-start="1" data-src-end="1">Hi</h1>',
+    );
   });
 
   test("detects images by extension", async () => {

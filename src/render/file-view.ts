@@ -3,8 +3,13 @@ import type { FileView } from "../shared/api";
 import { highlightLines, splitLines } from "./highlight";
 import { escapeHtml } from "./html";
 import { detectLanguage } from "./language";
+import { renderMarkdown } from "./markdown";
 
-export type RenderOptions = { maxHighlightBytes: number };
+export type RenderOptions = {
+  maxHighlightBytes: number;
+  /** Whether a root-relative path is listed; used to rewrite Markdown links. */
+  isListed?: (path: string) => boolean;
+};
 
 export const DEFAULT_MAX_HIGHLIGHT_BYTES = 2_000_000;
 
@@ -55,7 +60,8 @@ async function render(
   if (!stat.isFile() || (await file.slice(0, 8192).bytes()).includes(0)) {
     return { kind: "binary", path, mtime };
   }
-  const lines = splitLines(await file.text());
+  const text = await file.text();
+  const lines = splitLines(text);
   const lang = detectLanguage(path);
   if (stat.size > options.maxHighlightBytes) {
     return {
@@ -67,13 +73,11 @@ async function render(
       lineHtml: lines.map(escapeHtml),
     };
   }
-  const kind = lang === "markdown" ? "markdown" : "code";
-  return {
-    kind,
-    path,
-    mtime,
-    lang,
-    lines,
-    lineHtml: await highlightLines(lines, lang),
-  };
+  const lineHtml = await highlightLines(lines, lang);
+  if (lang !== "markdown") {
+    return { kind: "code", path, mtime, lang, lines, lineHtml };
+  }
+  const isListed = options.isListed ?? (() => false);
+  const previewHtml = await renderMarkdown(text, { path, isListed });
+  return { kind: "markdown", path, mtime, lang, lines, lineHtml, previewHtml };
 }

@@ -78,6 +78,7 @@ function listen(options: ServerOptions, port: number): Bun.Server<undefined> {
         return Response.json(
           await renderFile(abs, path, {
             maxHighlightBytes: options.maxHighlightBytes,
+            isListed: (p) => files.has(p),
           }),
         );
       }),
