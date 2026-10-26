@@ -11,7 +11,7 @@ import {
 import { type Reviewer, ReviewerContext } from "./context";
 import { DisplayModeMenu } from "./DisplayModeMenu";
 import { EndSessionDialog } from "./EndSessionDialog";
-import { FileTree } from "./FileTree";
+import { FileTree, type ThreadCounts } from "./FileTree";
 import { bumpFileVersion } from "./fileVersions";
 import { clientId, useNickname } from "./identity";
 import { LoginDialog } from "./LoginDialog";
@@ -121,12 +121,12 @@ export function App() {
 
   useEffect(() => announceView(docPath), [docPath]);
 
-  const openCounts = useMemo(() => {
-    const counts = new Map<string, number>();
+  const threadCounts = useMemo(() => {
+    const counts = new Map<string, ThreadCounts>();
     for (const thread of threads) {
-      if (thread.status === "open") {
-        counts.set(thread.path, (counts.get(thread.path) ?? 0) + 1);
-      }
+      const entry = counts.get(thread.path) ?? { open: 0, resolved: 0 };
+      entry[thread.status === "open" ? "open" : "resolved"]++;
+      counts.set(thread.path, entry);
     }
     return counts;
   }, [threads]);
@@ -217,7 +217,7 @@ export function App() {
               <FileTree
                 files={files}
                 selected={docPath}
-                badges={openCounts}
+                threads={threadCounts}
                 viewers={viewers}
                 changed={changed}
                 onSelect={openDoc}

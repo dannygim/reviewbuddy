@@ -44,3 +44,13 @@ export function buildTree(paths: string[]): TreeNode[] {
   }
   return roots;
 }
+
+/** Every directory above the given files: "a/b/c.md" gives "a" and "a/b". */
+export function ancestorDirs(paths: Iterable<string>): Set<string> {
+  const dirs = new Set<string>();
+  for (const path of paths) {
+    const parts = path.split("/").slice(0, -1);
+    parts.forEach((_, i) => dirs.add(parts.slice(0, i + 1).join("/")));
+  }
+  return dirs;
+}

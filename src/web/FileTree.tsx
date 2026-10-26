@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { buildTree, type TreeNode } from "../shared/tree";
+import { ancestorDirs, buildTree, type TreeNode } from "../shared/tree";
+import { CommentIcon } from "./icons";
 import { initials } from "./presence";
+
+export type ThreadCounts = { open: number; resolved: number };
 
 type Props = {
   files: string[];
   selected: string | null;
-  /** Number of open threads per file. */
-  badges: Map<string, number>;
+  /** Number of open and resolved threads per file. */
+  threads: Map<string, ThreadCounts>;
   /** Nicknames of the other people viewing each file. */
   viewers: Map<string, string[]>;
   /** Files that just changed on disk (highlighted briefly). */
@@ -15,8 +18,15 @@ type Props = {
 };
 
 export function FileTree(props: Props) {
-  const { files, selected, badges, viewers, changed, onSelect } = props;
+  const { files, selected, threads, viewers, changed, onSelect } = props;
   const tree = useMemo(() => buildTree(files), [files]);
+  const dirsWithOpen = useMemo(
+    () =>
+      ancestorDirs(
+        [...threads].filter(([, c]) => c.open > 0).map(([path]) => path),
+      ),
+    [threads],
+  );
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
   // Reveal the selected file, e.g. when it was opened from a shared link.
@@ -45,7 +55,8 @@ export function FileTree(props: Props) {
         depth={0}
         expanded={expanded}
         selected={selected}
-        badges={badges}
+        threads={threads}
+        dirsWithOpen={dirsWithOpen}
         viewers={viewers}
         changed={changed}
         onToggle={toggle}
@@ -60,7 +71,8 @@ type ListProps = {
   depth: number;
   expanded: Set<string>;
   selected: string | null;
-  badges: Map<string, number>;
+  threads: Map<string, ThreadCounts>;
+  dirsWithOpen: ReadonlySet<string>;
   viewers: Map<string, string[]>;
   changed: ReadonlySet<string>;
   onToggle: (path: string) => void;
@@ -68,7 +80,8 @@ type ListProps = {
 };
 
 function TreeList(props: ListProps) {
-  const { nodes, depth, expanded, selected, badges, viewers, changed } = props;
+  const { nodes, depth, expanded, selected, threads, dirsWithOpen } = props;
+  const { viewers, changed } = props;
   const { onToggle, onSelect } = props;
   const indent = { paddingLeft: `${0.5 + depth}rem` };
   return (
@@ -87,6 +100,9 @@ function TreeList(props: ListProps) {
                 {expanded.has(node.path) ? "▾" : "▸"}
               </span>
               {node.name}
+              {!expanded.has(node.path) && dirsWithOpen.has(node.path) && (
+                <span className="tree-dot" title="Open threads inside" />
+              )}
             </button>
             {expanded.has(node.path) && (
               <TreeList {...props} nodes={node.children} depth={depth + 1} />
@@ -110,15 +126,33 @@ function TreeList(props: ListProps) {
                   {initials(name)}
                 </span>
               ))}
-              {badges.get(node.path) ? (
-                <span className="tree-badge" title="Open threads">
-                  {badges.get(node.path)}
-                </span>
-              ) : null}
+              <ThreadMark counts={threads.get(node.path)} />
             </button>
           </li>
         ),
       )}
     </ul>
   );
+}
+
+function ThreadMark({ counts }: { counts: ThreadCounts | undefined }) {
+  if (counts?.open) {
+    return (
+      <span
+        className="tree-badge"
+        title={`${counts.open} open thread${counts.open === 1 ? "" : "s"}`}
+      >
+        <CommentIcon filled />
+        {counts.open}
+      </span>
+    );
+  }
+  if (counts?.resolved) {
+    return (
+      <span className="tree-resolved" title="Resolved threads only">
+        <CommentIcon />
+      </span>
+    );
+  }
+  return null;
 }

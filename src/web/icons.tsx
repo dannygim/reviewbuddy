@@ -43,3 +43,15 @@ export function MonitorIcon() {
     </Icon>
   );
 }
+
+// Same speech bubble as the logo, fitted to 16x16.
+export function CommentIcon({ filled }: { filled?: boolean }) {
+  return (
+    <Icon>
+      <path
+        d="M4.5 4h7a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H11v2.5L8.5 12h-4A2.5 2.5 0 0 1 2 9.5v-3A2.5 2.5 0 0 1 4.5 4z"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </Icon>
+  );
+}

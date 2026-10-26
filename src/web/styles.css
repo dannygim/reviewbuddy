@@ -323,13 +323,30 @@ button.primary {
   color: #ffffff;
 }
 
-.tree-badge {
+.tree-badge,
+.tree-resolved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
   margin-left: 0.5rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #ffffff;
   font-size: 0.75rem;
+}
+
+.tree-badge {
+  color: var(--accent);
+}
+
+.tree-resolved {
+  color: var(--muted);
+}
+
+.tree-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .dialog-backdrop {

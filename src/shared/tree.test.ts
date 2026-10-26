@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildTree, compareTreePaths } from "./tree";
+import { ancestorDirs, buildTree, compareTreePaths } from "./tree";
 
 describe("compareTreePaths", () => {
   test("puts directories before files at each level", () => {
@@ -64,5 +64,18 @@ describe("buildTree", () => {
 
   test("returns an empty list for no files", () => {
     expect(buildTree([])).toEqual([]);
+  });
+});
+
+describe("ancestorDirs", () => {
+  test("lists every directory above the files", () => {
+    expect(ancestorDirs(["a/b/c.md", "a/d.md", "e.md"])).toEqual(
+      new Set(["a", "a/b"]),
+    );
+  });
+
+  test("is empty for top-level files and for no files", () => {
+    expect(ancestorDirs(["e.md"])).toEqual(new Set());
+    expect(ancestorDirs([])).toEqual(new Set());
   });
 });
