@@ -4,6 +4,7 @@ import { read, write } from "./identity";
 export type DisplayMode = "light" | "dark" | "system";
 export type ColorScheme = "light" | "dark";
 
+// Also read by the inline script in index.html.
 const KEY = "reviewbuddy.displayMode";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 

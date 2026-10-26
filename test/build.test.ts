@@ -57,6 +57,9 @@ test("the compiled binary serves the app behind the PIN", async () => {
   expect((await fetch(new URL("/api/tree", url))).status).toBe(401);
   const html = await fetch(url).then((r) => r.text());
   expect(html).toContain('<div id="root"></div>');
+  // Applied by an inline script so a slow bundle cannot flash the other scheme.
+  const head = html.slice(0, html.indexOf("</head>"));
+  expect(head).toContain("reviewbuddy.displayMode");
 });
 
 test("the compiled binary loads Mermaid only for documents that use it", async () => {

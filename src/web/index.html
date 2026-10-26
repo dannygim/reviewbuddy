@@ -4,6 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>reviewbuddy</title>
+    <script>
+      // Inline so a pinned Display mode applies before the first paint, however
+      // slow the bundle is. Keep in sync with src/web/displayMode.ts.
+      try {
+        const mode = localStorage.getItem("reviewbuddy.displayMode");
+        if (mode === "light" || mode === "dark")
+          document.documentElement.dataset.displayMode = mode;
+      } catch {}
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
