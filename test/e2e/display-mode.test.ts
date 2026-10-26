@@ -161,12 +161,16 @@ test("redraws diagrams in the new scheme", async () => {
   await using view = webView({ width: 1000, height: 700 });
   const url = new URL("/#/doc/doc/diagram.md", server.url).href;
   await view.navigate(url);
-  await view.evaluate(`localStorage.clear()`);
+  await view.evaluate(`(localStorage.clear(), (window.beforeReload = true))`);
   await view.reload();
-  await waitFor(view, `!!document.querySelector(".mermaid svg")`);
+  await waitFor(
+    view,
+    `!window.beforeReload && !!document.querySelector(".mermaid svg")`,
+  );
 
-  // mermaid gives each render a new svg id, so strip it before comparing themes.
-  const STYLE = `(s => s.textContent.replaceAll(s.closest("svg").id, ""))(document.querySelector(".mermaid svg style"))`;
+  // mermaid gives each render a new svg id, so strip it before comparing
+  // themes. While a redraw is in progress there is no svg yet: null.
+  const STYLE = `(s => s && s.textContent.replaceAll(s.closest("svg").id, ""))(document.querySelector(".mermaid svg style"))`;
   const light = await view.evaluate(STYLE);
 
   await view.click(`[data-action="display-mode"]`);
@@ -175,7 +179,10 @@ test("redraws diagrams in the new scheme", async () => {
     `document.querySelector("#display-mode-menu").matches(":popover-open")`,
   );
   await view.click(`[data-display-mode="dark"]`);
-  await waitFor(view, `${STYLE} !== ${JSON.stringify(light)}`);
+  await waitFor(
+    view,
+    `(s => s !== null && s !== ${JSON.stringify(light)})(${STYLE})`,
+  );
   expect(
     await view.evaluate(
       `document.querySelector(".mermaid").getAttribute("data-source")`,
