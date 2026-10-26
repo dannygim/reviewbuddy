@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "./api";
+import { Logo } from "./Logo";
 import { MAX_NICKNAME_LENGTH } from "./NicknameDialog";
 
 type Props = {
@@ -32,6 +33,7 @@ export function LoginDialog({ initialNickname, onJoin }: Props) {
           }
         }}
       >
+        <Logo />
         <h2>Join the review</h2>
         <p className="muted">
           Enter your nickname and the 6-digit PIN shown where reviewbuddy was

@@ -76,6 +76,11 @@ test("the PIN is asked once per browser and again after a restart", async () => 
   // Nothing is loaded before the PIN.
   await waitFor(view, dialogShown);
   expect(await view.evaluate(treeShown)).toBe(false);
+  expect(
+    await view.evaluate(
+      `!!document.querySelector('[data-dialog="login"] [role="img"][aria-label="reviewbuddy"] svg')`,
+    ),
+  ).toBe(true);
 
   await view.click('[data-dialog="login"] input[name="nickname"]');
   await view.type("Alice");

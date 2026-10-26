@@ -377,6 +377,40 @@ button.primary {
   margin: 0;
 }
 
+.logo {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.logo b {
+  color: var(--accent);
+}
+
+.logo svg {
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.logo-back {
+  fill: none;
+  stroke: currentColor;
+}
+
+.logo-front {
+  fill: var(--accent);
+  stroke: var(--bg);
+}
+
+.logo-check {
+  fill: none;
+  stroke: var(--bg);
+  stroke-linecap: round;
+}
+
 .dialog label {
   display: grid;
   gap: 0.25rem;
