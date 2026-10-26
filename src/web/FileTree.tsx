@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ancestorDirs, buildTree, type TreeNode } from "../shared/tree";
+import {
+  ancestorDirs,
+  buildTree,
+  findReadme,
+  type TreeNode,
+} from "../shared/tree";
 import { CommentIcon } from "./icons";
 import { initials } from "./presence";
 
@@ -94,7 +99,12 @@ function TreeList(props: ListProps) {
               data-path={node.path}
               aria-expanded={expanded.has(node.path)}
               style={indent}
-              onClick={() => onToggle(node.path)}
+              onClick={() => {
+                const opening = !expanded.has(node.path);
+                onToggle(node.path);
+                const readme = opening && findReadme(node.children!);
+                if (readme) onSelect(readme);
+              }}
             >
               <span className="tree-twisty">
                 {expanded.has(node.path) ? "▾" : "▸"}

@@ -14,9 +14,12 @@ import { testSession, webView } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-e2e-")));
 mkdirSync(join(root, "doc"));
+mkdirSync(join(root, "guide"));
 mkdirSync(join(root, "src"));
 writeFileSync(join(root, "doc/A.md"), "# A\n\nbody\n");
 writeFileSync(join(root, "doc/B.md"), "# B\n\nbody\n");
+writeFileSync(join(root, "guide/README.md"), "# Guide\n");
+writeFileSync(join(root, "guide/intro.md"), "# Intro\n");
 writeFileSync(join(root, "src/main.ts"), "export const x = 1;\n");
 writeFileSync(join(root, "mise.toml"), "[tools]\n");
 
@@ -106,4 +109,46 @@ test("marks files and collapsed directories with threads", async () => {
       `document.querySelector('[data-path="mise.toml"]').querySelector(".tree-badge, .tree-resolved, .tree-dot")`,
     ),
   ).toBeNull();
+}, 30_000);
+
+test("opens a directory's README.md when expanding it", async () => {
+  await using view = webView({ width: 1000, height: 700 });
+  await view.navigate(`${server.url.href}#/doc/src/main.ts`);
+  const hash = () => view.evaluate(`location.hash`);
+  await waitFor(view, `!!document.querySelector('[data-path="guide"]')`);
+
+  await view.click('[data-path="guide"]');
+  await waitFor(view, `location.hash === "#/doc/guide/README.md"`);
+  await waitFor(
+    view,
+    `document.querySelector(".markdown h1")?.textContent === "Guide"`,
+  );
+
+  await view.click('[data-path="guide"]');
+  await waitFor(
+    view,
+    `document.querySelector('[data-path="guide"]').getAttribute("aria-expanded") === "false"`,
+  );
+  expect(await hash()).toBe("#/doc/guide/README.md");
+
+  await view.click('[data-path="mise.toml"]');
+  await waitFor(view, `location.hash === "#/doc/mise.toml"`);
+  await view.click('[data-path="doc"]');
+  await waitFor(view, `!!document.querySelector('[data-path="doc/A.md"]')`);
+  expect(await hash()).toBe("#/doc/mise.toml");
+}, 30_000);
+
+test("does not open the README.md when revealing a linked file", async () => {
+  await using view = webView({ width: 1000, height: 700 });
+  await view.navigate(`${server.url.href}#/doc/guide/intro.md`);
+  await waitFor(
+    view,
+    `!!document.querySelector('[data-path="guide/intro.md"]')`,
+  );
+  expect(
+    await view.evaluate(
+      `document.querySelector('[data-path="guide"]').getAttribute("aria-expanded")`,
+    ),
+  ).toBe("true");
+  expect(await view.evaluate(`location.hash`)).toBe("#/doc/guide/intro.md");
 }, 30_000);

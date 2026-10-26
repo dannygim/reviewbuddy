@@ -54,3 +54,13 @@ export function ancestorDirs(paths: Iterable<string>): Set<string> {
   }
   return dirs;
 }
+
+/** The README.md among a directory's children: README.md, else any case of readme.md in tree order. */
+export function findReadme(children: TreeNode[]): string | null {
+  const readmes = children.filter(
+    (c) => !c.children && c.name.toLowerCase() === "readme.md",
+  );
+  return (
+    (readmes.find((c) => c.name === "README.md") ?? readmes[0])?.path ?? null
+  );
+}

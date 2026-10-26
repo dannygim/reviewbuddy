@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ancestorDirs, buildTree, compareTreePaths } from "./tree";
+import { ancestorDirs, buildTree, compareTreePaths, findReadme } from "./tree";
 
 describe("compareTreePaths", () => {
   test("puts directories before files at each level", () => {
@@ -77,5 +77,28 @@ describe("ancestorDirs", () => {
   test("is empty for top-level files and for no files", () => {
     expect(ancestorDirs(["e.md"])).toEqual(new Set());
     expect(ancestorDirs([])).toEqual(new Set());
+  });
+});
+
+describe("findReadme", () => {
+  const readme = (...paths: string[]) =>
+    findReadme(buildTree(paths)[0]!.children!);
+
+  test("finds README.md in any case", () => {
+    expect(readme("d/README.md")).toBe("d/README.md");
+    expect(readme("d/Readme.md")).toBe("d/Readme.md");
+  });
+
+  test("prefers the exact README.md, else the first in tree order", () => {
+    expect(readme("d/README.md", "d/readme.md")).toBe("d/README.md");
+    expect(readme("d/readme.md", "d/Readme.md")).toBe("d/Readme.md");
+  });
+
+  test("ignores READMEs in subdirectories", () => {
+    expect(readme("d/sub/README.md")).toBeNull();
+  });
+
+  test("ignores other README names", () => {
+    expect(readme("d/README", "d/README.rst", "d/README.markdown")).toBeNull();
   });
 });
