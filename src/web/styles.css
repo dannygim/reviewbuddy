@@ -1,33 +1,26 @@
 :root {
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
-  --bg: #ffffff;
-  --fg: #1f2328;
-  --muted: #59636e;
-  --border: #d1d9e0;
-  --hover: #f6f8fa;
-  --selected: #ddf4ff;
-  --code-bg: #f6f8fa;
-  --link: #0969da;
-  --danger: #d1242f;
-  --line-selected: #fff8c5;
-  --accent: #0969da;
+  --bg: light-dark(#ffffff, #0d1117);
+  --fg: light-dark(#1f2328, #e6edf3);
+  --muted: light-dark(#59636e, #9198a1);
+  --border: light-dark(#d1d9e0, #3d444d);
+  --hover: light-dark(#f6f8fa, #151b23);
+  --selected: light-dark(#ddf4ff, #1f3a5f);
+  --code-bg: light-dark(#f6f8fa, #151b23);
+  --link: light-dark(#0969da, #4493f8);
+  --danger: light-dark(#d1242f, #f85149);
+  --line-selected: light-dark(#fff8c5, #3b2e0a);
+  --accent: light-dark(#0969da, #4493f8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --fg: #e6edf3;
-    --muted: #9198a1;
-    --border: #3d444d;
-    --hover: #151b23;
-    --selected: #1f3a5f;
-    --code-bg: #151b23;
-    --link: #4493f8;
-    --danger: #f85149;
-    --line-selected: #3b2e0a;
-    --accent: #4493f8;
-  }
+/* Display mode: Light and Dark pin the scheme; System leaves it to the OS. */
+:root[data-display-mode="light"] {
+  color-scheme: light;
+}
+
+:root[data-display-mode="dark"] {
+  color-scheme: dark;
 }
 
 html,
@@ -769,12 +762,9 @@ button:disabled {
   white-space: pre;
 }
 
-/* Shiki dual themes: switch token colors to the dark theme with the OS. */
-@media (prefers-color-scheme: dark) {
-  :is(.code-src, .markdown pre) span {
-    color: var(--shiki-dark) !important;
-    font-style: var(--shiki-dark-font-style) !important;
-    font-weight: var(--shiki-dark-font-weight) !important;
-    text-decoration: var(--shiki-dark-text-decoration) !important;
-  }
+/* Shiki emits font styles only as variables (the same in both themes). */
+:is(.code-src, .markdown pre) span {
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
 }

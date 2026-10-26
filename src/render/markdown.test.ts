@@ -94,7 +94,7 @@ describe("renderMarkdown syntax", () => {
   test("highlights fenced code with a known language", async () => {
     const html = await render("```ts\nconst a = 1;\n```\n");
     expect(html).toContain(
-      '<pre class="code-block" data-src-start="1" data-src-end="3"><code><span style="color:#D73A49;--shiki-dark:#F97583">const</span>',
+      '<pre class="code-block" data-src-start="1" data-src-end="3"><code><span style="color:light-dark(#D73A49, #F97583);--shiki-light:#D73A49;--shiki-dark:#F97583">const</span>',
     );
   });
 

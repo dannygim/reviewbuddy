@@ -79,6 +79,7 @@ export async function highlightLines(
   const { tokens } = hl.codeToTokens(lines.join("\n"), {
     lang,
     themes: { light: "github-light", dark: "github-dark" },
+    defaultColor: "light-dark()",
   });
   return lines.map((_, i) =>
     (tokens[i] ?? [])

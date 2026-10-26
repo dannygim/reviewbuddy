@@ -25,7 +25,7 @@ describe("highlightLines", () => {
     );
     expect(html).toHaveLength(3);
     expect(html[0]).toContain(
-      '<span style="color:#D73A49;--shiki-dark:#F97583">const</span>',
+      '<span style="color:light-dark(#D73A49, #F97583);--shiki-light:#D73A49;--shiki-dark:#F97583">const</span>',
     );
     expect(html[1]).toBe("");
     expect(html[2]).toContain("// &lt;b&gt;");
