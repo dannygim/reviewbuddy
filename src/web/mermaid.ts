@@ -1,15 +1,35 @@
 import mermaid from "mermaid";
+import type { ColorScheme } from "./displayMode";
 
-/** Renders `.mermaid` elements in place; a diagram that fails keeps its source. */
-export async function renderMermaid(nodes: HTMLElement[]): Promise<void> {
-  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+// mermaid.initialize is global, so renders run one at a time to keep two
+// themes from mixing when the scheme is switched quickly.
+let queue: Promise<void> = Promise.resolve();
+
+/**
+ * Renders `.mermaid` elements in place in the given scheme, and redraws ones
+ * already drawn; a diagram that fails keeps its source.
+ */
+export function renderMermaid(
+  nodes: HTMLElement[],
+  scheme: ColorScheme,
+): Promise<void> {
+  queue = queue.then(() => draw(nodes, scheme));
+  return queue;
+}
+
+async function draw(nodes: HTMLElement[], scheme: ColorScheme): Promise<void> {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: "strict",
-    theme: dark ? "dark" : "default",
+    theme: scheme === "dark" ? "dark" : "default",
   });
   for (const node of nodes) {
-    const source = node.textContent ?? "";
+    // The SVG replaces the source, so keep it to redraw in another scheme.
+    node.dataset.source ??= node.textContent ?? "";
+    const source = node.dataset.source;
+    node.removeAttribute("data-processed");
+    node.classList.remove("mermaid-error");
+    node.textContent = source;
     try {
       await mermaid.run({ nodes: [node] });
     } catch {

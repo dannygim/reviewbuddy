@@ -21,6 +21,7 @@ import {
 } from "./blocks";
 import { Composer } from "./Composer";
 import { useReviewer } from "./context";
+import { useColorScheme } from "./displayMode";
 import { threadStore, useThreads } from "./store";
 import { ThreadView } from "./Thread";
 
@@ -74,6 +75,8 @@ export function MarkdownPreview({
   // comment) survive re-renders caused by other people's comments.
   const slotEls = useRef(new Map<Element | string, HTMLElement>());
 
+  const scheme = useColorScheme();
+
   // Mermaid is large, so it is only loaded for documents that need it.
   useEffect(() => {
     const nodes = [
@@ -81,10 +84,10 @@ export function MarkdownPreview({
     ];
     if (nodes.length > 0) {
       void import("./mermaid").then(({ renderMermaid }) =>
-        renderMermaid(nodes),
+        renderMermaid(nodes, scheme),
       );
     }
-  }, [clean]);
+  }, [clean, scheme]);
 
   // New HTML replaces every block, so old slots are gone with it.
   useLayoutEffect(() => {

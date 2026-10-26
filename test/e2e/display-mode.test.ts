@@ -15,6 +15,11 @@ import { testSession, webView } from "../support";
 const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-e2e-")));
 mkdirSync(join(root, "src"));
 writeFileSync(join(root, "src/main.ts"), "export const x = 1;\n");
+mkdirSync(join(root, "doc"));
+writeFileSync(
+  join(root, "doc/diagram.md"),
+  "# Diagram\n\n```mermaid\ngraph TD; A-->B\n```\n",
+);
 
 let server: AppServer;
 
@@ -150,4 +155,29 @@ test("switches the display mode from the header menu and keeps it", async () => 
   await view.click(`[data-display-mode="system"]`);
   await waitFor(view, `${attr} === null`);
   expect(await view.evaluate(stored)).toBe("system");
+}, 30_000);
+
+test("redraws diagrams in the new scheme", async () => {
+  await using view = webView({ width: 1000, height: 700 });
+  const url = new URL("/#/doc/doc/diagram.md", server.url).href;
+  await view.navigate(url);
+  await view.evaluate(`localStorage.clear()`);
+  await view.reload();
+  await waitFor(view, `!!document.querySelector(".mermaid svg")`);
+
+  const STYLE = `document.querySelector(".mermaid svg style").textContent`;
+  const light = await view.evaluate(STYLE);
+
+  await view.click(`[data-action="display-mode"]`);
+  await waitFor(
+    view,
+    `document.querySelector("#display-mode-menu").matches(":popover-open")`,
+  );
+  await view.click(`[data-display-mode="dark"]`);
+  await waitFor(view, `${STYLE} !== ${JSON.stringify(light)}`);
+  expect(
+    await view.evaluate(
+      `document.querySelector(".mermaid").getAttribute("data-source")`,
+    ),
+  ).toBe("graph TD; A-->B\n");
 }, 30_000);
