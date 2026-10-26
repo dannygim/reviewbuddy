@@ -165,7 +165,8 @@ test("redraws diagrams in the new scheme", async () => {
   await view.reload();
   await waitFor(view, `!!document.querySelector(".mermaid svg")`);
 
-  const STYLE = `document.querySelector(".mermaid svg style").textContent`;
+  // mermaid gives each render a new svg id, so strip it before comparing themes.
+  const STYLE = `(s => s.textContent.replaceAll(s.closest("svg").id, ""))(document.querySelector(".mermaid svg style"))`;
   const light = await view.evaluate(STYLE);
 
   await view.click(`[data-action="display-mode"]`);
