@@ -9,6 +9,7 @@ import {
   needsPin,
 } from "./api";
 import { type Reviewer, ReviewerContext } from "./context";
+import { DisplayModeMenu } from "./DisplayModeMenu";
 import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree } from "./FileTree";
 import { bumpFileVersion } from "./fileVersions";
@@ -203,6 +204,7 @@ export function App() {
               </span>
             ))}
           </span>
+          <DisplayModeMenu />
         </header>
         {session?.readOnly && (
           <div className="banner">

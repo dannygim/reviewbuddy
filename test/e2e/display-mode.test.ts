@@ -74,3 +74,80 @@ test("follows the display mode attribute", async () => {
   await view.evaluate(`document.documentElement.dataset.displayMode = "light"`);
   expect(await view.evaluate(BODY_BG)).toBe("rgb(255, 255, 255)");
 }, 30_000);
+
+test("switches the display mode from the header menu and keeps it", async () => {
+  await using view = webView({ width: 1000, height: 700 });
+  const url = new URL("/#/doc/src/main.ts", server.url).href;
+  await view.navigate(url);
+  await view.evaluate(`localStorage.clear()`);
+  await view.reload();
+  await waitFor(
+    view,
+    `!!document.querySelector('[data-action="display-mode"]')`,
+  );
+
+  const BUTTON = `[data-action="display-mode"]`;
+  const MENU = `document.querySelector("#display-mode-menu")`;
+  const attr = `document.documentElement.getAttribute("data-display-mode")`;
+  const stored = `localStorage.getItem("reviewbuddy.displayMode")`;
+  const focused = `document.activeElement?.getAttribute("data-display-mode")`;
+  const onButton = `document.activeElement === document.querySelector('${BUTTON}')`;
+
+  expect(await view.evaluate(attr)).toBeNull();
+  expect(
+    await view.evaluate(
+      `document.querySelector('${BUTTON}').getAttribute("aria-label")`,
+    ),
+  ).toBe("Display mode: System");
+
+  await view.click(BUTTON);
+  await waitFor(view, `${MENU}.matches(":popover-open")`);
+  await waitFor(view, `${focused} === "system"`);
+  expect(
+    await view.evaluate(
+      `document.querySelector('[data-display-mode="system"]').getAttribute("aria-checked")`,
+    ),
+  ).toBe("true");
+
+  // press("ArrowDown") maps to an editing command and sends no keydown, so
+  // dispatch the key event directly.
+  await view.evaluate(
+    `document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))`,
+  );
+  await waitFor(view, `${focused} === "light"`);
+  // Enter on a focused <button> is a native click; press("Enter") sends an
+  // editing command instead of a key event, so click the focused item.
+  await view.evaluate(`(document.activeElement.click(), true)`);
+  await waitFor(view, `${attr} === "light"`);
+  await waitFor(view, `!${MENU}.matches(":popover-open")`);
+  expect(await view.evaluate(stored)).toBe("light");
+  await waitFor(view, onButton);
+
+  await view.click(BUTTON);
+  await waitFor(view, `${MENU}.matches(":popover-open")`);
+  await view.click(`[data-display-mode="dark"]`);
+  await waitFor(view, `${attr} === "dark"`);
+  expect(await view.evaluate(BODY_BG)).toBe("rgb(13, 17, 23)");
+
+  // The mark tells the reloaded page from the old one, which reload() may
+  // still show when it returns.
+  await view.evaluate(`(window.beforeReload = true)`);
+  await view.reload();
+  await waitFor(
+    view,
+    `!window.beforeReload && !!document.querySelector('${BUTTON}')`,
+  );
+  expect(await view.evaluate(attr)).toBe("dark");
+
+  await view.click(BUTTON);
+  await waitFor(view, `${MENU}.matches(":popover-open")`);
+  await view.press("Escape");
+  await waitFor(view, `!${MENU}.matches(":popover-open")`);
+  await waitFor(view, onButton);
+
+  await view.click(BUTTON);
+  await waitFor(view, `${MENU}.matches(":popover-open")`);
+  await view.click(`[data-display-mode="system"]`);
+  await waitFor(view, `${attr} === null`);
+  expect(await view.evaluate(stored)).toBe("system");
+}, 30_000);
