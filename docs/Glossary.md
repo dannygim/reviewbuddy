@@ -17,5 +17,6 @@
 | 再アンカー | ファイルが変わったときに、スレッドのアンカーの内容を探し直して行範囲を更新すること | 見つからなければ Outdated |
 | Review パネル | 全ファイルのスレッドの一覧から対象を選び、プロンプトを生成・コピーする画面 | |
 | プレゼンス | 接続中の参加者と、各参加者が開いているファイルの表示 | |
+| Display mode | 画面の配色の選び方。Light / Dark / System (OS のライト / ダーク設定に従う) の 3 つ | ヘッダーで切り替え、ブラウザごとに `localStorage` に保存する。既定は System。[画面構成.md](./design/画面構成.md) |
 | read-only | 終了 (ended) したセッションの状態。閲覧はできるが、コメントの書き込みはできない | `reviewbuddy session reopen` で戻せる |
 | tailnet | Tailscale でつながった端末のネットワーク | 共有には `tailscale serve` (HTTPS) を推奨 |

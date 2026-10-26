@@ -2,7 +2,7 @@
 
 **目的: Markdown を Preview 表示しながら、元ファイルの行範囲にひも付けてコメントできるようにするための、レンダリング・行マッピング・Mermaid・サニタイズの仕様を定める。**
 
-- 対応する調査: [レンダリング_調査.md](../research/レンダリング_調査.md)
+- 対応する調査: [レンダリング_調査.md](../research/レンダリング_調査.md) / [Display_mode_調査.md](../research/Display_mode_調査.md) (Mermaid の描き直し)
 - 対象の要件: F6 / F7 / F9 (Preview 表示でのブロックコメント) ([要件.md](./要件.md))
 
 ***
@@ -37,7 +37,10 @@ Preview 上のコメントの肝。各ブロック要素に、元ファイルの
 ## Mermaid
 
 - 言語 `mermaid` のフェンスを `<div class="mermaid" data-src-start data-src-end>` (中身はエスケープしたソース) に変換する
-- クライアントは、`.mermaid` を含むファイルを開いたときだけ Mermaid を動的 import して描画する (`securityLevel: 'strict'`、テーマは `prefers-color-scheme` に合わせる)
+- クライアントは、`.mermaid` を含むファイルを開いたときだけ Mermaid を動的 import して描画する (`securityLevel: 'strict'`、テーマは有効な配色に合わせて `default` / `dark`)
+- 有効な配色は Display mode で決まる (System のときは `prefers-color-scheme`。[画面構成.md](./画面構成.md))。図の色は描画した SVG に埋め込まれるため、配色が変わったら (Display mode の切り替え、System のときの OS の設定の変更) 開いている図を描き直す
+  - 最初の描画の前に、ソースを要素の `data-source` に退避する
+  - 描き直すときは、中身を `data-source` のソースに戻し、Mermaid が付けた `data-processed` を外してから、新しいテーマで描画する
 - 描画に失敗したら、ソースをそのまま `<pre>` で出し、エラーを添える
 - v12 の既定値の変更と、`securityLevel: 'strict'` の扱いは、組み込む前に確認する ([レンダリング_調査.md](../research/レンダリング_調査.md) の要検証項目)
 
@@ -60,3 +63,4 @@ Preview 上のコメントの肝。各ブロック要素に、元ファイルの
 - 言語付きのコードフェンスがハイライトされ、`mermaid` は `.mermaid` の要素になる
 - `<script>` や `javascript:` の href を含む Markdown を開いても実行されない (E2E)
 - Mermaid を含まないファイルを開いたとき、Mermaid のチャンクを読み込まない (E2E)
+- Display mode を切り替えると、開いている Mermaid の図がそのモードのテーマで描き直される (E2E)
