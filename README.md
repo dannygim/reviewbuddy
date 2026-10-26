@@ -55,6 +55,8 @@ Open the URL, enter a nickname and the PIN, and choose a file. Share the URL and
 - **Comment on Markdown**: in the Preview tab, hover a block and click **+** (Shift+click another block to extend).
 - **Copy a prompt**: open **Review**, choose threads (all open ones by default), and click **Copy prompt**. Copied threads are marked **Sent**; tick **Resolve copied threads** to resolve them as well.
 - **End the session**: **End** makes the session read-only for everyone.
+- **Display mode**: the icon at the right end of the header switches between Light, Dark and System (follows your OS). The choice is kept in your browser.
+- **Directory READMEs**: expanding a directory in the file tree opens the README.md directly inside it.
 
 Starting reviewbuddy again in the same directory resumes the same session. `reviewbuddy --new` starts a fresh one.
 
