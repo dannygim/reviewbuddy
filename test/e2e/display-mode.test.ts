@@ -84,11 +84,11 @@ test("switches the display mode from the header menu and keeps it", async () => 
   await using view = webView({ width: 1000, height: 700 });
   const url = new URL("/#/doc/src/main.ts", server.url).href;
   await view.navigate(url);
-  await view.evaluate(`localStorage.clear()`);
+  await view.evaluate(`(localStorage.clear(), (window.beforeReload = true))`);
   await view.reload();
   await waitFor(
     view,
-    `!!document.querySelector('[data-action="display-mode"]')`,
+    `!window.beforeReload && !!document.querySelector('[data-action="display-mode"]')`,
   );
 
   const BUTTON = `[data-action="display-mode"]`;
@@ -110,7 +110,7 @@ test("switches the display mode from the header menu and keeps it", async () => 
   await waitFor(view, `${focused} === "system"`);
   expect(
     await view.evaluate(
-      `document.querySelector('[data-display-mode="system"]').getAttribute("aria-checked")`,
+      `document.querySelector('#display-mode-menu [data-display-mode="system"]').getAttribute("aria-checked")`,
     ),
   ).toBe("true");
 
@@ -130,7 +130,7 @@ test("switches the display mode from the header menu and keeps it", async () => 
 
   await view.click(BUTTON);
   await waitFor(view, `${MENU}.matches(":popover-open")`);
-  await view.click(`[data-display-mode="dark"]`);
+  await view.click(`#display-mode-menu [data-display-mode="dark"]`);
   await waitFor(view, `${attr} === "dark"`);
   expect(await view.evaluate(BODY_BG)).toBe("rgb(13, 17, 23)");
 
@@ -152,7 +152,7 @@ test("switches the display mode from the header menu and keeps it", async () => 
 
   await view.click(BUTTON);
   await waitFor(view, `${MENU}.matches(":popover-open")`);
-  await view.click(`[data-display-mode="system"]`);
+  await view.click(`#display-mode-menu [data-display-mode="system"]`);
   await waitFor(view, `${attr} === null`);
   expect(await view.evaluate(stored)).toBe("system");
 }, 30_000);
@@ -178,7 +178,7 @@ test("redraws diagrams in the new scheme", async () => {
     view,
     `document.querySelector("#display-mode-menu").matches(":popover-open")`,
   );
-  await view.click(`[data-display-mode="dark"]`);
+  await view.click(`#display-mode-menu [data-display-mode="dark"]`);
   await waitFor(
     view,
     `(s => s !== null && s !== ${JSON.stringify(light)})(${STYLE})`,

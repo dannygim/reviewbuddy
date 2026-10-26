@@ -13,8 +13,9 @@ export function renderMermaid(
   nodes: HTMLElement[],
   scheme: ColorScheme,
 ): Promise<void> {
-  queue = queue.then(() => draw(nodes, scheme));
-  return queue;
+  const run = queue.then(() => draw(nodes, scheme));
+  queue = run.catch(() => {});
+  return run;
 }
 
 async function draw(nodes: HTMLElement[], scheme: ColorScheme): Promise<void> {
@@ -24,6 +25,7 @@ async function draw(nodes: HTMLElement[], scheme: ColorScheme): Promise<void> {
     theme: scheme === "dark" ? "dark" : "default",
   });
   for (const node of nodes) {
+    if (!node.isConnected) continue;
     // The SVG replaces the source, so keep it to redraw in another scheme.
     node.dataset.source ??= node.textContent ?? "";
     const source = node.dataset.source;

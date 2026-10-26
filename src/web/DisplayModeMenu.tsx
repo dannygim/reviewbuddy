@@ -79,7 +79,9 @@ export function DisplayModeMenu() {
             data-display-mode={mode}
             onClick={() => choose(mode)}
           >
-            <span className="mode-check">{mode === current ? "✓" : ""}</span>
+            <span className="mode-check" aria-hidden="true">
+              {mode === current ? "✓" : ""}
+            </span>
             {label}
           </button>
         ))}
