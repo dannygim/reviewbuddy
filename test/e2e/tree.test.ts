@@ -152,3 +152,17 @@ test("does not open the README.md when revealing a linked file", async () => {
   ).toBe("true");
   expect(await view.evaluate(`location.hash`)).toBe("#/doc/guide/intro.md");
 }, 30_000);
+
+test("keeps the open file when re-expanding its directory", async () => {
+  await using view = webView({ width: 1000, height: 700 });
+  await view.navigate(`${server.url.href}#/doc/guide/intro.md`);
+  const dir = `document.querySelector('[data-path="guide"]')`;
+  await waitFor(view, `${dir}?.getAttribute("aria-expanded") === "true"`);
+
+  await view.click('[data-path="guide"]');
+  await waitFor(view, `${dir}.getAttribute("aria-expanded") === "false"`);
+  await view.click('[data-path="guide"]');
+  await waitFor(view, `${dir}.getAttribute("aria-expanded") === "true"`);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(await view.evaluate(`location.hash`)).toBe("#/doc/guide/intro.md");
+}, 30_000);

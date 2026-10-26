@@ -102,7 +102,8 @@ function TreeList(props: ListProps) {
               onClick={() => {
                 const opening = !expanded.has(node.path);
                 onToggle(node.path);
-                const readme = opening && findReadme(node.children!);
+                const inside = selected?.startsWith(`${node.path}/`);
+                const readme = opening && !inside && findReadme(node.children!);
                 if (readme) onSelect(readme);
               }}
             >
