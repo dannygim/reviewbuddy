@@ -44,6 +44,12 @@
 - GitHub Actions では、別のリポジトリの private なツールを入れるのに GitHub App のトークンか PAT が必要 **確認済**
 - `mise lock` は API 呼び出しを減らすが、private な成果物を公開するものではない **確認済**
 
+### public リポジトリでの利用 (2026-10-27 に追記)
+
+- public な Release にトークンは要らない。mise は public な GitHub の Release の情報を mise-versions 経由で読むため、ほとんどのインストールでトークンは不要 **確認済** (mise のドキュメント)
+- トークンが要るのは、mise が forge の API を直接呼ぶ場合 (private リポジトリ、GitHub Enterprise など) と、GitHub の匿名のレート制限で `403 Forbidden` になった後。トークンなしの直接の呼び出しは、GitHub の低い匿名のレート制限を共有する (ドキュメントに具体的な回数は無い) **確認済** (mise のドキュメント)
+- public な GitHub では、アセットに artifact attestation があれば mise が確かめる **確認済** (mise のドキュメント)
+
 ### 公開直後のリリース (`minimum_release_age`)
 
 - mise 2026.10 の `minimum_release_age` は既定で `24h`。公開から 24 時間たっていない版は、`latest` や `0.1` のような範囲の指定を解決するときに飛ばされる。`mise upgrade` は「no versions found ... matching minimum_release_age (24h)」と警告して何もしない **確認済** (2026-10-23、mise 2026.10.17。v0.1.1 の公開直後に発生)
@@ -73,7 +79,7 @@
 
 ## 出典
 
-> 出典: [mise — GitHub backend](https://mise.jdx.dev/dev-tools/backends/github.html) (確認日: 2026-10-23)
+> 出典: [mise — GitHub backend](https://mise.jdx.dev/dev-tools/backends/github.html) (確認日: 2026-10-23。public な Release と attestation は 2026-10-27 に再確認)
 
 > 出典: [mise — packslip backend](https://mise.jdx.dev/dev-tools/backends/packslip.html) (確認日: 2026-10-23)
 
@@ -89,7 +95,7 @@
 
 > 出典: [packslip](https://packslip.dev) (確認日: 2026-10-23)
 
-> 出典: [mise — GitHub tokens](https://mise.jdx.dev/dev-tools/github-tokens.html) (確認日: 2026-10-23)
+> 出典: [mise — GitHub tokens](https://mise.jdx.dev/dev-tools/github-tokens.html) (確認日: 2026-10-23。public リポジトリでの利用は 2026-10-27 に確認)
 
 > 出典: [mise — Settings: minimum_release_age / minimum_release_age_excludes](https://mise.jdx.dev/configuration/settings.html#minimum_release_age) (確認日: 2026-10-23)
 

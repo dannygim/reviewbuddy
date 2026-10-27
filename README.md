@@ -31,13 +31,13 @@ mise upgrade github:dannygim/reviewbuddy --minimum-release-age 0s
 mise settings add minimum_release_age_excludes github:dannygim/reviewbuddy
 ```
 
-While the repository is private, mise needs a GitHub token that can read it. If you use the GitHub CLI, let mise ask it for one:
+Installing needs no GitHub token. If mise fails with `403 Forbidden` because it hit GitHub's anonymous rate limit, give it a token. If you use the GitHub CLI, let mise ask it for one:
 
 ```sh
 mise settings set github.credential_command 'gh auth token --hostname "$MISE_CREDENTIAL_HOST"'
 ```
 
-(gh usually keeps its token in the macOS keychain, where mise cannot read it directly.) Alternatively, set `MISE_GITHUB_TOKEN` to a fine-grained token with read access to the repository's contents. `mise token github` shows which token mise will use. People who only open reviewbuddy in a browser need nothing.
+(gh usually keeps its token in the macOS keychain, where mise cannot read it directly.) Alternatively, set `MISE_GITHUB_TOKEN` to a GitHub token. `mise token github` shows which token mise will use. People who only open reviewbuddy in a browser need nothing.
 
 ## Use
 
