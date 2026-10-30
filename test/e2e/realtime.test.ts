@@ -126,7 +126,16 @@ async function hover(view: Bun.WebView, selector: string): Promise<void> {
   );
 }
 
-test("comments on Preview blocks show under the block and in the source", async () => {
+const card = (body: string) =>
+  `[...document.querySelectorAll(".comment-card")].find((c) => c.textContent.includes(${JSON.stringify(body)}))?.getBoundingClientRect()`;
+const cardTop = (body: string) => `${card(body)}?.top`;
+const cardBottom = (body: string) => `${card(body)}?.bottom`;
+const blockTop = (line: number) =>
+  `document.querySelector('.markdown [data-src-start="${line}"]').getBoundingClientRect().top`;
+const lit = `[...document.querySelectorAll(".markdown [data-comment-target]")].map((b) => b.dataset.srcStart).join()`;
+const settled = `[...document.querySelectorAll(".comment-card")].every((c) => c.getAnimations().length === 0)`;
+
+test("comments on Preview blocks show beside the block and in the source", async () => {
   await using view = await joinAs("Carol", "doc/guide.md");
   await waitFor(
     view,
@@ -136,12 +145,12 @@ test("comments on Preview blocks show under the block and in the source", async 
   // One block.
   await hover(view, 'p[data-src-start="3"]');
   await view.click(".block-add");
-  await view.click(".preview-slot .composer textarea");
+  await view.click(".comment-pane .composer textarea");
   await view.type("Too short");
-  await view.click('.preview-slot .composer [data-action="submit"]');
+  await view.click('.comment-pane .composer [data-action="submit"]');
   await waitFor(
     view,
-    `document.querySelector('p[data-src-start="3"]').nextElementSibling?.querySelector(".thread .comment-body")?.textContent === "Too short"`,
+    `Math.abs(${cardTop("Too short")} - ${blockTop(3)}) <= 1`,
   );
 
   // Shift+click extends the selection to the next paragraph (lines 3-6).
@@ -153,28 +162,54 @@ test("comments on Preview blocks show under the block and in the source", async 
     view,
     `document.querySelectorAll(".preview-selected").length === 2`,
   );
-  await view.click(".preview-slot .composer textarea");
+  await view.click(".comment-pane .composer textarea");
   await view.type("Merge these");
-  await view.click('.preview-slot .composer [data-action="submit"]');
+  await view.click('.comment-pane .composer [data-action="submit"]');
   await waitFor(
     view,
     `[...document.querySelectorAll(".thread-header")].some((h) => h.textContent.includes("Lines 3–6"))`,
   );
+  // No block holds lines 3-6, so it lines up with the first one it touches.
+  // The new thread is the active one: the card already there moves up.
+  await waitFor(
+    view,
+    `Math.abs(${cardTop("Merge these")} - ${blockTop(3)}) <= 1`,
+  );
+  await waitFor(view, settled);
   expect(
     await view.evaluate(
-      `document.querySelector('p[data-src-start="5"]').nextElementSibling?.textContent.includes("Merge these")`,
+      `Math.abs(${cardTop("Merge these")} - ${cardBottom("Too short")} - 8) <= 1`,
     ),
   ).toBe(true);
+  expect(await view.evaluate(lit)).toBe("3,5");
 
-  // The same threads appear in the Source view under their last lines.
+  // Clicking a block makes the smallest thread on it the active one.
+  await view.click('.markdown p[data-src-start="3"]');
+  await waitFor(
+    view,
+    `Math.abs(${cardTop("Too short")} - ${blockTop(3)}) <= 1`,
+  );
+  await waitFor(view, settled);
+  expect(
+    await view.evaluate(
+      `Math.abs(${cardTop("Merge these")} - ${cardBottom("Too short")} - 8) <= 1`,
+    ),
+  ).toBe(true);
+  expect(await view.evaluate(lit)).toBe("3");
+
+  // The same threads appear in the Source view beside their first lines.
   await view.click('[data-mode="source"]');
   await waitFor(
     view,
-    `document.querySelectorAll(".code .thread").length === 2`,
+    `document.querySelectorAll(".comment-pane .thread").length === 2`,
   );
   expect(
     await view.evaluate(
-      `document.querySelector('tr[data-line="3"]').nextElementSibling.textContent.includes("Too short")`,
+      `(() => {
+        const card = [...document.querySelectorAll(".comment-card")].find((c) => c.textContent.includes("Too short"));
+        const row = document.querySelector('tr[data-line="3"]');
+        return Math.abs(card.getBoundingClientRect().top - row.getBoundingClientRect().top) <= 1;
+      })()`,
     ),
   ).toBe(true);
 }, 60_000);

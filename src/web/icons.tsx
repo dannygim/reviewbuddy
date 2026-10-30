@@ -44,6 +44,15 @@ export function MonitorIcon() {
   );
 }
 
+export function SidebarIcon() {
+  return (
+    <Icon>
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1" />
+      <path d="M6 2.5v11" />
+    </Icon>
+  );
+}
+
 // Same speech bubble as the logo, fitted to 16x16.
 export function CommentIcon({ filled }: { filled?: boolean }) {
   return (

@@ -14,7 +14,7 @@ import { testSession, webView } from "../support";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-comments-")));
 mkdirSync(join(root, "src"));
-// Long enough that the composer opening under a line pushes later lines down.
+// Enough lines to select a range in the middle.
 writeFileSync(
   join(root, "src/app.ts"),
   Array.from({ length: 30 }, (_, i) => `const v${i + 1} = ${i + 1};\n`).join(
@@ -70,8 +70,8 @@ test("comments on source lines, then replies and resolves", async () => {
     `document.querySelectorAll(".code tr[data-line]").length === 30`,
   );
 
-  // Select lines 9-10 and comment. Clicking 9 opens the composer under it, so
-  // line 10 moves; the Shift+click must still select exactly 9-10.
+  // Select lines 9-10 and comment. Clicking 9 opens the composer; the
+  // Shift+click must still select exactly 9-10.
   await view.click('tr[data-line="9"] .code-ln');
   await view.click('tr[data-line="10"] .code-ln', { modifiers: ["Shift"] });
   await waitFor(

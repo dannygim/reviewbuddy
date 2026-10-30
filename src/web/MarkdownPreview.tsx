@@ -7,41 +7,21 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
-import type { Thread } from "../shared/api";
 import { createThread } from "./api";
 import {
   blockAt,
   blockForRange,
   blocks,
-  createSlot,
+  coveredBlocks,
   type LineRange,
   rangeOf,
-  removeSlot,
 } from "./blocks";
+import { CommentPane, type PaneItem } from "./CommentPane";
 import { Composer } from "./Composer";
 import { useReviewer } from "./context";
 import { useColorScheme } from "./displayMode";
 import { threadStore, useThreads } from "./store";
 import { ThreadView } from "./Thread";
-
-type Slot = {
-  key: string;
-  el: HTMLElement;
-  threads: Thread[];
-  composer: boolean;
-};
-const ORPHANS = "orphans";
-
-// Stable React keys for blocks, so a slot's portal is not remounted.
-const blockKeys = new WeakMap<Element, string>();
-let nextBlockKey = 0;
-const keyOf = (key: Element | string) => {
-  if (typeof key === "string") return key;
-  let value = blockKeys.get(key);
-  if (!value) blockKeys.set(key, (value = `block-${nextBlockKey++}`));
-  return value;
-};
 
 export function MarkdownPreview({
   path,
@@ -70,10 +50,7 @@ export function MarkdownPreview({
   const [selection, setSelection] = useState<LineRange | null>(null);
   // Shown only after the mouse button is released (see CodeView).
   const [composerOpen, setComposerOpen] = useState(false);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  // Slot elements are reused per block, so portals (and a half-written
-  // comment) survive re-renders caused by other people's comments.
-  const slotEls = useRef(new Map<Element | string, HTMLElement>());
+  const [active, setActive] = useState<string | null>(null);
 
   const scheme = useColorScheme();
 
@@ -89,52 +66,11 @@ export function MarkdownPreview({
     }
   }, [clean, scheme]);
 
-  // New HTML replaces every block, so old slots are gone with it.
+  // New HTML replaces every block, so the selection is gone with it.
   useLayoutEffect(() => {
-    slotEls.current.clear();
     setSelection(null);
     setComposerOpen(false);
   }, [clean]);
-
-  // Place threads (and the composer) after the block they belong to.
-  useLayoutEffect(() => {
-    const root = article.current;
-    if (!root) return;
-    const wanted = new Map<Element | string, Slot>();
-    const slotFor = (key: Element | string) => {
-      let slot = wanted.get(key);
-      if (!slot) {
-        let el = slotEls.current.get(key);
-        if (!el || !el.isConnected) {
-          el =
-            typeof key === "string"
-              ? Object.assign(document.createElement("div"), {
-                  className: "preview-slot preview-orphans",
-                })
-              : createSlot(key as HTMLElement);
-          if (typeof key === "string") root.append(el);
-        }
-        slot = { key: keyOf(key), el, threads: [], composer: false };
-        wanted.set(key, slot);
-      }
-      return slot;
-    };
-    for (const thread of threads) {
-      const block = blockForRange(root, {
-        start: thread.startLine,
-        end: thread.endLine,
-      });
-      slotFor(block ?? ORPHANS).threads.push(thread);
-    }
-    if (selection && composerOpen) {
-      slotFor(blockForRange(root, selection) ?? ORPHANS).composer = true;
-    }
-    for (const [key, el] of slotEls.current) {
-      if (!wanted.has(key) && el.isConnected) removeSlot(el);
-    }
-    slotEls.current = new Map([...wanted].map(([key, slot]) => [key, slot.el]));
-    setSlots([...wanted.values()]);
-  }, [clean, threads, selection, composerOpen]);
 
   // Highlight the selected blocks.
   useLayoutEffect(() => {
@@ -153,10 +89,10 @@ export function MarkdownPreview({
 
   const onMouseMove = (event: MouseEvent) => {
     const target = event.target as Element;
-    if (!article.current || target.closest(".preview-slot, .block-add")) return;
+    if (!article.current || target.closest(".block-add")) return;
     const block = blockAt(target, article.current);
     if (!block || !wrap.current) return;
-    // Recomputed on every move: inserted comments shift blocks down.
+    // Recomputed on every move: diagrams and images shift blocks down.
     const top =
       block.getBoundingClientRect().top -
       wrap.current.getBoundingClientRect().top;
@@ -193,60 +129,75 @@ export function MarkdownPreview({
     setComposerOpen(false);
   };
 
+  // Threads (and the composer) line up with the block they belong to.
+  const block = (range: LineRange) => () =>
+    article.current ? blockForRange(article.current, range) : null;
+  const covered = (range: LineRange) => () =>
+    article.current ? coveredBlocks(article.current, range) : [];
+  const items: PaneItem[] = threads.map((thread) => {
+    const range = { start: thread.startLine, end: thread.endLine };
+    return {
+      key: thread.id,
+      anchor: block(range),
+      targets: covered(range),
+      thread,
+      node: <ThreadView thread={thread} />,
+    };
+  });
+  if (selection && composerOpen) {
+    items.push({
+      key: "composer",
+      anchor: block(selection),
+      targets: covered(selection),
+      thread: null,
+      node: (
+        <Composer
+          submitLabel="Comment"
+          onCancel={clear}
+          onSubmit={async (body) => {
+            const thread = await createThread({
+              path,
+              startLine: selection.start,
+              endLine: selection.end,
+              originView: "preview",
+              author: reviewer.nickname,
+              clientId: reviewer.clientId,
+              body,
+            });
+            threadStore.upsert(thread);
+            setActive(thread.id);
+            clear();
+          }}
+        />
+      ),
+    });
+  }
+
   return (
-    <div
-      ref={wrap}
-      className="preview-wrap"
-      onMouseMove={reviewer.readOnly ? undefined : onMouseMove}
-      onMouseLeave={() => setHover(null)}
-    >
-      <article
-        ref={article}
-        className="markdown"
-        onClick={onClick}
-        dangerouslySetInnerHTML={{ __html: clean }}
-      />
-      {hover && !reviewer.readOnly && (
-        <button
-          className="block-add"
-          style={{ top: hover.top }}
-          title="Comment on this block (Shift+click to extend)"
-          onMouseDown={onAdd}
-        >
-          +
-        </button>
-      )}
-      {slots.map((slot) =>
-        createPortal(
-          <>
-            {slot.threads.map((thread) => (
-              <ThreadView key={thread.id} thread={thread} />
-            ))}
-            {slot.composer && selection && (
-              <Composer
-                submitLabel="Comment"
-                onCancel={clear}
-                onSubmit={async (body) => {
-                  threadStore.upsert(
-                    await createThread({
-                      path,
-                      startLine: selection.start,
-                      endLine: selection.end,
-                      originView: "preview",
-                      author: reviewer.nickname,
-                      clientId: reviewer.clientId,
-                      body,
-                    }),
-                  );
-                  clear();
-                }}
-              />
-            )}
-          </>,
-          slot.el,
-          slot.key,
-        ),
-      )}
-    </div>
+    <CommentPane items={items} active={active} onActive={setActive}>
+      <div
+        ref={wrap}
+        className="preview-wrap"
+        onMouseMove={reviewer.readOnly ? undefined : onMouseMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <article
+          ref={article}
+          className="markdown"
+          onClick={onClick}
+          dangerouslySetInnerHTML={{ __html: clean }}
+        />
+        {hover && !reviewer.readOnly && (
+          <button
+            className="block-add"
+            style={{ top: hover.top }}
+            title="Comment on this block (Shift+click to extend)"
+            onMouseDown={onAdd}
+          >
+            +
+          </button>
+        )}
+      </div>
+    </CommentPane>
   );
 }

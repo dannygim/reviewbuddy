@@ -3,7 +3,9 @@ import type { FileView } from "../shared/api";
 import { fetchFile, rawUrl } from "./api";
 import { CodeView } from "./CodeView";
 import { useFileVersion } from "./fileVersions";
+import { CommentIcon } from "./icons";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { usePaneOpen } from "./panes";
 
 type State = { view: FileView } | { error: string } | null;
 type Mode = "preview" | "source";
@@ -26,15 +28,35 @@ export function Viewer({ path }: { path: string }) {
     };
   }, [path, version]);
 
-  const isMarkdown = state && "view" in state && state.view.kind === "markdown";
+  const view = state && "view" in state ? state.view : null;
+  // Images and other binary files cannot be commented on.
+  const commentable = view && view.kind !== "image" && view.kind !== "binary";
   return (
     <section className="viewer">
       <header className="viewer-header">
         <span>{path}</span>
-        {isMarkdown && <Tabs mode={mode} onChange={setMode} />}
+        <span className="viewer-actions">
+          {view?.kind === "markdown" && <Tabs mode={mode} onChange={setMode} />}
+          {commentable && <CommentPaneButton />}
+        </span>
       </header>
       <ViewerBody state={state} mode={mode} />
     </section>
+  );
+}
+
+function CommentPaneButton() {
+  const [open, setOpen] = usePaneOpen("commentPane");
+  return (
+    <button
+      className="app-mode"
+      data-action="comment-pane"
+      aria-label="Comments"
+      aria-pressed={open}
+      onClick={() => setOpen(!open)}
+    >
+      <CommentIcon />
+    </button>
   );
 }
 

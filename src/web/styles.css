@@ -48,6 +48,10 @@ body {
   min-height: 0;
 }
 
+.app-body.tree-closed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-header {
   display: flex;
   gap: 1rem;
@@ -583,16 +587,74 @@ button:disabled {
   color: var(--accent);
 }
 
+/* The lines of the active or hovered thread; a selection shows over them. */
+.code tr[data-comment-target] td {
+  background: var(--selected);
+}
+
 .code tr.selected td {
   background: var(--line-selected);
 }
 
-.code-inline > td {
-  padding: 0.5rem 1rem 0.5rem 3.5rem;
-  font-family: system-ui, sans-serif;
+/* Content on the left, its threads lined up beside it on the right. */
+.viewer-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+}
+
+.viewer-content {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* Cards pushed up past the top by the active one are cut off. */
+.comment-pane {
+  position: relative;
+  align-self: stretch;
+  overflow: clip;
+  border-left: 1px solid var(--border);
+}
+
+/*
+ * The scroll margin keeps a card scrolled to clear of the sticky header.
+ * Cards slide to new positions; a new card has no top yet, so it appears
+ * in place.
+ */
+.comment-card {
+  position: absolute;
+  right: 0.75rem;
+  left: 0.75rem;
   font-size: 0.875rem;
   line-height: 1.5;
-  white-space: normal;
+  scroll-margin-top: 3.5rem;
+  transition: top 0.3s ease;
+}
+
+.comment-card.active > .thread {
+  border-color: var(--accent);
+}
+
+.viewer-columns.pane-closed {
+  grid-template-columns: minmax(0, 1fr) 28px;
+}
+
+/* Same colors as the file tree's thread icons. */
+.comment-marker {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.comment-marker[data-status="resolved"] {
+  color: var(--muted);
 }
 
 .thread,
@@ -701,6 +763,12 @@ button:disabled {
   padding: 0 0.75rem;
   color: var(--danger);
   font-size: 0.8125rem;
+}
+
+.viewer-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .viewer-tabs {
@@ -837,25 +905,12 @@ button:disabled {
   cursor: pointer;
 }
 
+.markdown [data-comment-target] {
+  background: var(--selected);
+}
+
 .markdown .preview-selected {
   background: var(--line-selected);
-}
-
-.markdown .preview-slot {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0.5rem 0 1rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.markdown li > .preview-slot {
-  list-style: none;
-}
-
-.markdown tr.preview-slot,
-.markdown tr.preview-slot td {
-  background: none;
 }
 
 .mermaid-error {

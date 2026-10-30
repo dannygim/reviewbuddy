@@ -13,9 +13,11 @@ import { DisplayModeMenu } from "./DisplayModeMenu";
 import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree, type ThreadCounts } from "./FileTree";
 import { bumpFileVersion } from "./fileVersions";
+import { SidebarIcon } from "./icons";
 import { clientId, useNickname } from "./identity";
 import { LoginDialog } from "./LoginDialog";
 import { NicknameDialog } from "./NicknameDialog";
+import { usePaneOpen } from "./panes";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
 import { announce, announceView, connectRealtime } from "./realtime";
 import { ReviewPanel } from "./ReviewPanel";
@@ -33,6 +35,7 @@ export function App() {
   const [reviewing, setReviewing] = useState(false);
   const [ending, setEnding] = useState(false);
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
+  const [treeOpen, setTreeOpen] = usePaneOpen("fileTree");
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
@@ -156,6 +159,15 @@ export function App() {
     <ReviewerContext.Provider value={reviewer}>
       <div className="app">
         <header className="app-header">
+          <button
+            className="app-mode"
+            data-action="file-tree"
+            aria-label="File tree"
+            aria-pressed={treeOpen}
+            onClick={() => setTreeOpen(!treeOpen)}
+          >
+            <SidebarIcon />
+          </button>
           <strong>reviewbuddy</strong>
           <span className="app-root" title={session?.root}>
             {error
@@ -211,8 +223,9 @@ export function App() {
             This session has ended. Comments are read-only.
           </div>
         )}
-        <div className="app-body">
-          <aside className="app-sidebar">
+        <div className={treeOpen ? "app-body" : "app-body tree-closed"}>
+          {/* Hidden, not removed, so expanded directories stay expanded. */}
+          <aside className="app-sidebar" hidden={!treeOpen}>
             {files && (
               <FileTree
                 files={files}

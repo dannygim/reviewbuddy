@@ -22,47 +22,42 @@ export function blockAt(target: Element, root: Element): HTMLElement | null {
 
 /**
  * Where a comment on `range` belongs: the smallest block that contains the
- * whole range, else the smallest block containing its last line.
+ * whole range, else the smallest of the blocks that overlap it and start
+ * first, so the comment lines up with the start of the range.
  */
 export function blockForRange(
   root: Element,
   range: LineRange,
 ): HTMLElement | null {
   const span = (el: Element) => rangeOf(el).end - rangeOf(el).start;
-  const holding = blocks(root).filter((el) => {
+  const overlapping = blocks(root).filter((el) => {
     const r = rangeOf(el);
-    return r.start <= range.end && range.end <= r.end;
+    return r.start <= range.end && range.start <= r.end;
   });
-  const whole = holding.filter((el) => rangeOf(el).start <= range.start);
+  const whole = overlapping.filter((el) => {
+    const r = rangeOf(el);
+    return r.start <= range.start && range.end <= r.end;
+  });
+  const first = Math.min(...overlapping.map((el) => rangeOf(el).start));
   const pick = (list: HTMLElement[]) =>
     list.reduce<HTMLElement | null>(
       (best, el) => (best === null || span(el) <= span(best) ? el : best),
       null,
     );
-  return pick(whole) ?? pick(holding);
+  return (
+    pick(whole) ?? pick(overlapping.filter((el) => rangeOf(el).start === first))
+  );
 }
 
 /**
- * Creates the element that holds comments shown after `block`, keeping the
- * HTML valid: a row after a table row, the end of a list item, else a sibling.
+ * The blocks a comment on `range` is about: the blocks inside the range, else
+ * the one it belongs to (a range within a single block).
  */
-export function createSlot(block: HTMLElement): HTMLElement {
-  if (block.tagName === "TR") {
-    const row = document.createElement("tr");
-    row.className = "preview-slot";
-    const cell = document.createElement("td");
-    cell.colSpan = Math.max(1, block.children.length);
-    row.append(cell);
-    block.after(row);
-    return cell;
-  }
-  const slot = document.createElement("div");
-  slot.className = "preview-slot";
-  if (block.tagName === "LI") block.append(slot);
-  else block.after(slot);
-  return slot;
-}
-
-export function removeSlot(slot: HTMLElement): void {
-  (slot.tagName === "TD" ? slot.parentElement! : slot).remove();
+export function coveredBlocks(root: Element, range: LineRange): HTMLElement[] {
+  const inside = blocks(root).filter((el) => {
+    const r = rangeOf(el);
+    return range.start <= r.start && r.end <= range.end;
+  });
+  const one = blockForRange(root, range);
+  return inside.length > 0 ? inside : one ? [one] : [];
 }
