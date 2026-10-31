@@ -46,7 +46,7 @@ Open the URL, enter a nickname and the PIN, and choose a file. Share the URL and
 - **Copy a prompt**: open **Review**, choose threads (all open ones by default), and click **Copy prompt**. Copied threads are marked **Sent**; tick **Resolve copied threads** to resolve them as well.
 - **End the session**: **End** makes the session read-only for everyone.
 - **Display mode**: the icon at the right end of the header switches between Light, Dark and System (follows your OS). The choice is kept in your browser.
-- **Directory READMEs**: expanding a directory in the file tree opens the README.md directly inside it.
+- **Directory READMEs**: opening the URL without a file shows the README.md at the root, and expanding a directory in the file tree opens the README.md directly inside it.
 - **Comments beside the text**: threads sit in a column to the right, level with the lines or blocks they are about. Where several crowd together, click a card or its lines to bring that card level with them. The speech-bubble button in the file's header folds the column down to markers; click a marker to open it again.
 - **Hide the file tree**: the button at the left end of the header. Both choices are kept in your browser.
 
