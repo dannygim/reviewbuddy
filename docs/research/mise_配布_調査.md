@@ -73,7 +73,7 @@
 - **private のままでも自分は使える**。gh で `gh auth login` 済みなら、mise は gh の `hosts.yml` を読む。ただし期限切れの `GITHUB_TOKEN` などが環境変数に残っていると、先にそちらが使われて失敗する
 - **private の間は artifact attestation を付けられない** (GitHub Enterprise Cloud が必要)。checksum の検証は効く
 - **packslip を足すと registry の Tier 1 になる**が、private で動くかは未確認。public にしてから導入する
-- **新しいリリースは、利用者の `mise upgrade` には 24 時間後に出てくる** (mise の `minimum_release_age` の既定値)。急ぐときの手順を README に書く
+- **新しいリリースは、利用者の `mise upgrade` には 24 時間後に出てくる** (mise の `minimum_release_age` の既定値)。公開当日に手元で上げて確かめる手順を [リリース手順.md](../ops/リリース手順.md) に書く
 
 ***
 

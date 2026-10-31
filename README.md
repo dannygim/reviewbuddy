@@ -21,16 +21,6 @@ reviewbuddy --version
 
 Binaries are built for macOS (Apple silicon) and Linux (x64, arm64).
 
-reviewbuddy was called akapen up to 0.2.0. If you installed it under that name, remove it with `mise unuse -g github:dannygim/akapen` and install as above.
-
-mise holds back releases younger than 24 hours by default (`minimum_release_age`), so `mise upgrade` only offers a new reviewbuddy release the day after it is published. To take it right away:
-
-```sh
-mise upgrade github:dannygim/reviewbuddy --minimum-release-age 0s
-# or exempt reviewbuddy from the delay for good:
-mise settings add minimum_release_age_excludes github:dannygim/reviewbuddy
-```
-
 Installing needs no GitHub token. If mise fails with `403 Forbidden` because it hit GitHub's anonymous rate limit, give it a token. If you use the GitHub CLI, let mise ask it for one:
 
 ```sh
