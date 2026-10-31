@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionInfo } from "../shared/api";
 import type { ServerEvent } from "../shared/events";
+import { buildTree, findReadme } from "../shared/tree";
 import {
   endSession,
   fetchSession,
@@ -21,7 +22,7 @@ import { usePaneOpen } from "./panes";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
 import { announce, announceView, connectRealtime } from "./realtime";
 import { ReviewPanel } from "./ReviewPanel";
-import { openDoc, useDocPath } from "./router";
+import { openDoc, replaceDoc, useDocPath } from "./router";
 import { threadStore, useThreads } from "./store";
 import { Viewer } from "./Viewer";
 
@@ -123,6 +124,15 @@ export function App() {
   }, [nickname]);
 
   useEffect(() => announceView(docPath), [docPath]);
+
+  // With no file open, show the root README.md if there is one.
+  const rootReadme = useMemo(
+    () => (files ? findReadme(buildTree(files)) : null),
+    [files],
+  );
+  useEffect(() => {
+    if (!docPath && rootReadme) replaceDoc(rootReadme);
+  }, [docPath, rootReadme]);
 
   const threadCounts = useMemo(() => {
     const counts = new Map<string, ThreadCounts>();
@@ -238,12 +248,15 @@ export function App() {
             )}
           </aside>
           <main className="app-main">
-            {docPath ? (
-              // Loaded only once the PIN was accepted.
-              session && <Viewer key={docPath} path={docPath} />
-            ) : (
-              <p className="viewer-note">Select a file to start reviewing.</p>
-            )}
+            {docPath
+              ? // Loaded only once the PIN was accepted.
+                session && <Viewer key={docPath} path={docPath} />
+              : files &&
+                !rootReadme && (
+                  <p className="viewer-note">
+                    Select a file to start reviewing.
+                  </p>
+                )}
           </main>
           {reviewing && session && (
             <ReviewPanel

@@ -16,3 +16,8 @@ export function useDocPath(): string | null {
 export function openDoc(path: string): void {
   window.location.hash = hashForDocPath(path);
 }
+
+/** Like openDoc, but replaces the current history entry instead of adding one. */
+export function replaceDoc(path: string): void {
+  window.location.replace(hashForDocPath(path));
+}
