@@ -14,8 +14,8 @@
 - **構成方針** — Bun の単一バイナリ、依存は最小限 (サーバー `markdown-it` / `shiki` / `ignore`、クライアント `react` / `react-dom` / `mermaid` / `dompurify`)、対象ディレクトリは読み取り専用、データは `~/.config/reviewbuddy/` のみに書く。逸脱するときは ADR で理由を残す。
 - **利用の前提** — 通話などでその場にいる同僚と、URL と起動ごとの 6 桁の PIN を共有して使う (ADR-0007)。アカウントによる認証は持たない。リモート共有の手段 (HTTPS の終端など) は Tailscale などに任せる。
 - **reviewbuddy の責務境界**
-  - reviewbuddy が担う: ファイル一覧と表示、Markdown の Preview と行マッピング、コメントの永続化とリアルタイム配信、プロンプトの生成とコピー、セッションの管理、PIN による閲覧の制限とブラウザ経由の攻撃への最低限の対策
-  - reviewbuddy が担わない: ファイルの編集、Coding Agent の起動や直接連携 (v2 候補)、アカウントによる認証、HTTPS の終端、Git の操作
+  - reviewbuddy が担う: ファイル一覧と表示、未コミットの変更の表示 (Changes 画面)、Markdown の Preview と行マッピング、コメントの永続化とリアルタイム配信、プロンプトの生成とコピー、セッションの管理、PIN による閲覧の制限とブラウザ経由の攻撃への最低限の対策
+  - reviewbuddy が担わない: ファイルの編集、Coding Agent の起動や直接連携 (v2 候補)、アカウントによる認証、HTTPS の終端、Git の操作 (コミットなど。差分の読み取りには `--no-optional-locks` 付きの plumbing だけを使う)
 - **詳細は以下を参照**
   - `adr/` — 設計原則・個別の技術選定理由 (技術決定の正本)
   - `design/要件.md` — 要件 ID (F1〜F13 / A1〜A4) の正本
