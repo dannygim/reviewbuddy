@@ -8,7 +8,11 @@ import {
 import { diffSequences, type Edit } from "./myers";
 import { WORD_TOKEN } from "./words";
 
-const HTML_TOKEN = new RegExp(`<[^>]*>|&#?\\w+;|${WORD_TOKEN.source}`, "gsu");
+// A tag is one token, even with > inside a quoted attribute (raw HTML in Markdown).
+const HTML_TOKEN = new RegExp(
+  `<(?:[^>"']|"[^"]*"|'[^']*')*>|&#?\\w+;|${WORD_TOKEN.source}`,
+  "gsu",
+);
 const SOURCE_LINES = / data-src-(?:start|end)="\d+"/g;
 /** Above this many changed tokens or blocks, a stretch is replaced as a whole. */
 const MAX_COST = 2000;

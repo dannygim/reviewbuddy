@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { git, gitRepo, writeFiles } from "../../test/support";
 import { FileIndex } from "../files/file-index";
 import type { FileDiff } from "../shared/api";
-import { listChanges } from "./changes";
+import { listChanges, readWorkTree } from "./changes";
 import { parseHunkHeaders, renderDiff } from "./file-diff";
 
 describe("parseHunkHeaders", () => {
@@ -57,9 +57,11 @@ describe("renderDiff", () => {
     const change = (await listChanges(root, index)).files.find(
       (f) => f.path === path,
     )!;
-    const newPath =
-      change.status === "deleted" ? null : join(root, change.path);
-    return renderDiff(root, change, newPath, {
+    const newBytes =
+      change.status === "deleted"
+        ? null
+        : readWorkTree(root, index, change.path);
+    return renderDiff(root, change, newBytes, {
       maxHighlightBytes: 2_000_000,
       isListed: () => false,
     });
@@ -164,6 +166,58 @@ describe("renderDiff", () => {
       oldLines: ["1", "2", "3", "4", "5"],
       changes: [{ oldStart: 5, oldCount: 1, newStart: 5, newCount: 1 }],
     });
+  });
+
+  test("compares a symlink by its target path, like Git", async () => {
+    const diff = await diffOf(
+      { "a.txt": "A\n", "b.txt": "B\n" },
+      (root) => {
+        symlinkSync("a.txt", join(root, "link"));
+        git(root, "add", "link");
+        git(root, "commit", "-q", "-m", "link");
+        rmSync(join(root, "link"));
+        symlinkSync("b.txt", join(root, "link"));
+      },
+      "link",
+    );
+    if (diff.kind !== "text") throw new Error("expected text");
+    expect(diff.oldLines.map(text)).toEqual(["a.txt"]);
+    expect(diff.newLines.map(text)).toEqual(["b.txt"]);
+    expect(diff.changes).toMatchObject([
+      { oldStart: 1, oldCount: 1, newStart: 1, newCount: 1 },
+    ]);
+  });
+
+  test("finds the changes itself when Git compares something else", async () => {
+    // Removed from the index but kept on disk: Git reports a deletion.
+    const diff = await diffOf(
+      { "a.txt": "1\n2\n3\n4\n5\n" },
+      (root) => {
+        writeFiles(root, { "a.txt": "1\nzwei\n3\n4\n5\n6\n" });
+        git(root, "rm", "-q", "--cached", "a.txt");
+      },
+      "a.txt",
+    );
+    expect(diff).toMatchObject({
+      kind: "text",
+      changes: [
+        { oldStart: 2, oldCount: 1, newStart: 2, newCount: 1, context: "" },
+        { oldStart: 5, oldCount: 0, newStart: 6, newCount: 1, context: "" },
+      ],
+    });
+  });
+
+  test("treats a path with wildcard characters literally", async () => {
+    const diff = await diffOf(
+      { "a*.txt": "1\n", "another.txt": "x\ny\n" },
+      (root) => writeFiles(root, { "a*.txt": "2\n", "another.txt": "x\nY\n" }),
+      "a*.txt",
+    );
+    expect(diff).toMatchObject({
+      kind: "text",
+      changes: [{ oldStart: 1, oldCount: 1, newStart: 1, newCount: 1 }],
+    });
+    if (diff.kind === "text") expect(diff.changes).toHaveLength(1);
   });
 
   test("renders the changes of a Markdown file", async () => {

@@ -29,6 +29,16 @@ describe("htmlDiff", () => {
       htmlDiff("<p>use <code>a</code> now</p>", "<p>use <em>b</em> now</p>"),
     ).toBe("<p>use <del>a</del><em><ins>b</ins></em> now</p>");
   });
+
+  test("keeps a tag whole when a quoted attribute contains >", () => {
+    // Raw HTML in Markdown reaches the diff as written.
+    expect(
+      htmlDiff(
+        '<p>x <span title="a > b">y</span></p>',
+        "<p>x <span title='c > d'>y</span></p>",
+      ),
+    ).toBe("<p>x <span title='c > d'>y</span></p>");
+  });
 });
 
 describe("renderMarkdownDiff", () => {

@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
+import { join } from "node:path";
 import {
   git,
   gitRepo,
@@ -22,6 +23,10 @@ afterAll(async () => {
 async function serve(files: Record<string, string>, watch = false) {
   const root = gitRepo(files);
   roots.push(root);
+  return { root, ...(await start(root, watch)) };
+}
+
+async function start(root: string, watch: boolean) {
   const server = startServer({
     root,
     host: "127.0.0.1",
@@ -38,7 +43,7 @@ async function serve(files: Record<string, string>, watch = false) {
     const res = await fetch(new URL(path, server.url));
     return { status: res.status, body: (await res.json()) as T };
   };
-  return { root, server, get };
+  return { server, get };
 }
 
 describe("GET /api/changes and /api/diff", () => {
@@ -72,33 +77,59 @@ describe("GET /api/changes and /api/diff", () => {
 describe("changes.changed", () => {
   test("is published when a file changes and when changes are committed", async () => {
     const { root, server, get } = await serve({ "a.md": "one\n" }, true);
-    const events: ServerEvent[] = [];
-    const ws = new WebSocket(
-      `ws://127.0.0.1:${server.port}/ws?token=${TEST_TOKEN}`,
-    );
-    ws.onmessage = (m) =>
-      events.push(JSON.parse(String(m.data)) as ServerEvent);
-    await new Promise((resolve) => (ws.onopen = resolve));
-    await Bun.sleep(300); // let the watcher settle
+    await expectEditAndCommit(root, server, get);
+  }, 20_000);
 
-    const waitForEvent = async () => {
-      const deadline = Date.now() + 5000;
-      while (!events.some((e) => e.type === "changes.changed")) {
-        if (Date.now() > deadline) throw new Error("no changes.changed");
-        await Bun.sleep(50);
-      }
-      events.length = 0;
-    };
+  // Git's metadata is outside the root in these: a commit changes nothing in it.
+  test("is published when changes are committed in a linked worktree", async () => {
+    const repo = gitRepo({ "a.md": "one\n" });
+    const tree = `${repo}-tree`;
+    roots.push(repo, tree);
+    git(repo, "worktree", "add", "-q", "-b", "tree", tree);
+    const { server, get } = await start(tree, true);
+    await expectEditAndCommit(tree, server, get);
+  }, 20_000);
 
-    writeFiles(root, { "a.md": "two\n" });
-    await waitForEvent();
-    expect(
-      (await get<ChangesResponse>("/api/changes")).body.files,
-    ).toHaveLength(1);
-
-    git(root, "commit", "-q", "-am", "edit");
-    await waitForEvent();
-    expect((await get<ChangesResponse>("/api/changes")).body.files).toEqual([]);
-    ws.close();
+  test("is published when changes are committed in a directory of the repository", async () => {
+    const repo = gitRepo({ "sub/a.md": "one\n" });
+    roots.push(repo);
+    const root = join(repo, "sub");
+    const { server, get } = await start(root, true);
+    await expectEditAndCommit(root, server, get);
   }, 20_000);
 });
+
+/** Edits a.md in `root` and then commits it, expecting changes.changed for each. */
+async function expectEditAndCommit(
+  root: string,
+  server: AppServer,
+  get: Awaited<ReturnType<typeof start>>["get"],
+) {
+  const events: ServerEvent[] = [];
+  const ws = new WebSocket(
+    `ws://127.0.0.1:${server.port}/ws?token=${TEST_TOKEN}`,
+  );
+  ws.onmessage = (m) => events.push(JSON.parse(String(m.data)) as ServerEvent);
+  await new Promise((resolve) => (ws.onopen = resolve));
+  await Bun.sleep(300); // let the watcher settle
+
+  const waitForEvent = async () => {
+    const deadline = Date.now() + 5000;
+    while (!events.some((e) => e.type === "changes.changed")) {
+      if (Date.now() > deadline) throw new Error("no changes.changed");
+      await Bun.sleep(50);
+    }
+    events.length = 0;
+  };
+
+  writeFiles(root, { "a.md": "two\n" });
+  await waitForEvent();
+  expect((await get<ChangesResponse>("/api/changes")).body.files).toHaveLength(
+    1,
+  );
+
+  git(root, "commit", "-q", "-am", "edit");
+  await waitForEvent();
+  expect((await get<ChangesResponse>("/api/changes")).body.files).toEqual([]);
+  ws.close();
+}

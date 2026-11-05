@@ -48,12 +48,17 @@ export function diffSequences<T>(
 function shortestPath<T>(a: T[], b: T[], maxCost: number): Op[] | null {
   const n = a.length;
   const m = b.length;
-  const max = n + m;
+  if (n === 0 || m === 0) {
+    return [...Array<Op>(n).fill("delete"), ...Array<Op>(m).fill("insert")];
+  }
+  // Sized for the costs searched, not the input: memory grows with maxCost².
+  const max = Math.min(n + m, maxCost);
   const offset = max + 1;
   const v = new Int32Array(2 * max + 3);
+  // trace[d] keeps only diagonals -d-1..d+1, the ones step d reads.
   const trace: Int32Array[] = [];
-  for (let d = 0; d <= Math.min(max, maxCost); d++) {
-    trace.push(v.slice());
+  for (let d = 0; d <= max; d++) {
+    trace.push(v.slice(offset - d - 1, offset + d + 2));
     for (let k = -d; k <= d; k += 2) {
       let x =
         k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!)
@@ -65,28 +70,23 @@ function shortestPath<T>(a: T[], b: T[], maxCost: number): Op[] | null {
         y++;
       }
       v[offset + k] = x;
-      if (x >= n && y >= m) return backtrack(trace, offset, n, m);
+      if (x >= n && y >= m) return backtrack(trace, n, m);
     }
   }
   return null;
 }
 
-function backtrack(
-  trace: Int32Array[],
-  offset: number,
-  n: number,
-  m: number,
-): Op[] {
+function backtrack(trace: Int32Array[], n: number, m: number): Op[] {
   const ops: Op[] = [];
   let x = n;
   let y = m;
   for (let d = trace.length - 1; d >= 0; d--) {
     const v = trace[d]!;
+    const at = (k: number) => v[k + d + 1]!;
     const k = x - y;
-    const down =
-      k === -d || (k !== d && v[offset + k - 1]! < v[offset + k + 1]!);
+    const down = k === -d || (k !== d && at(k - 1) < at(k + 1));
     const prevK = d === 0 ? 0 : down ? k + 1 : k - 1;
-    const prevX = d === 0 ? 0 : v[offset + prevK]!;
+    const prevX = d === 0 ? 0 : at(prevK);
     const prevY = prevX - prevK;
     while (x > prevX && y > prevY) {
       ops.push("equal");

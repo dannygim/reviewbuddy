@@ -82,3 +82,15 @@ test("keeps a common prefix and suffix even over the limit", () => {
     { type: "equal", a: 7, b: 7, count: 1 },
   ]);
 });
+
+test("keeps the memory for the search within the cost limit", () => {
+  // Two long, entirely different sides: the search gives up at the limit.
+  const a = Array.from({ length: 20_000 }, (_, i) => `a${i}`);
+  const b = Array.from({ length: 20_000 }, (_, i) => `b${i}`);
+  Bun.gc(true);
+  const before = process.memoryUsage().rss;
+  const edits = diffSequences(a, b, 2000);
+  const grown = process.memoryUsage().rss - before;
+  expect(edits.map((e) => e.type)).toEqual(["delete", "insert"]);
+  expect(grown).toBeLessThan(100 * 1024 * 1024);
+});

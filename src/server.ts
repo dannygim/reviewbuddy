@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type AccessGate, authCookie, authCookieName } from "./auth";
-import { listChanges } from "./diff/changes";
+import { listChanges, readWorkTree } from "./diff/changes";
+import { gitDirsOutside } from "./diff/git";
 import { renderDiff } from "./diff/file-diff";
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
@@ -23,7 +24,7 @@ import type {
   TreeResponse,
 } from "./shared/api";
 import { VERSION } from "./version";
-import { type Change, watchRoot } from "./watch/watcher";
+import { type Change, watchGitDirs, watchRoot } from "./watch/watcher";
 import index from "./web/index.html";
 
 export type SessionContext = {
@@ -263,14 +264,14 @@ function listen(options: ServerOptions, port: number): AppServer {
         const change = (await currentChanges()).files.find(
           (f) => f.path === path,
         );
-        // Like /api/file: only listed files, and never through a symlink out of the root.
-        const abs =
-          change?.status === "deleted" ? null : resolveFile(root, files, path);
-        if (!change || (change.status !== "deleted" && !abs)) {
+        // Only listed files, and a symlink as its target path (never the file it points to).
+        const bytes =
+          change?.status === "deleted" ? null : readWorkTree(root, files, path);
+        if (!change || (change.status !== "deleted" && !bytes)) {
           return errorResponse(404, "File not found");
         }
         return Response.json(
-          await renderDiff(root, change, abs, {
+          await renderDiff(root, change, bytes, {
             maxHighlightBytes: options.maxHighlightBytes,
             isListed: (p) => files.has(p),
           }),
@@ -340,15 +341,21 @@ function listen(options: ServerOptions, port: number): AppServer {
   }
 
   if (options.watch) {
-    watchRoot(
-      root,
-      (path) => files.has(path),
-      (change) =>
-        onChange(change).catch((error) => {
-          // A failed refresh must not take the server down; the next change retries.
-          console.error("reviewbuddy: watching failed:", error);
-        }),
-    );
+    const report = (change: Change) =>
+      onChange(change).catch((error) => {
+        // A failed refresh must not take the server down; the next change retries.
+        console.error("reviewbuddy: watching failed:", error);
+      });
+    watchRoot(root, (path) => files.has(path), report);
+    // A commit in a linked worktree or below the repository's root changes
+    // only Git's directories outside the root.
+    gitDirsOutside(root)
+      .then((dirs) =>
+        watchGitDirs(dirs, () => report({ files: [], tree: true })),
+      )
+      .catch((error) => {
+        console.error("reviewbuddy: watching Git failed:", error);
+      });
   }
   return server;
 }

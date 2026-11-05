@@ -4,6 +4,7 @@ import {
   realpathSync,
   rmSync,
   statSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -207,5 +208,55 @@ describe("listChanges", () => {
     expect((await changes(root)).files[0]!.version).toBe(first);
     writeFiles(root, { "a.txt": "3\n" });
     expect((await changes(root)).files[0]!.version).not.toBe(first);
+  });
+
+  test("changes the version when only the HEAD side changes", async () => {
+    const root = repo({ "a.txt": "1\n" });
+    writeFiles(root, { "a.txt": "2\n" });
+    const first = (await changes(root)).files[0]!.version;
+    writeFiles(root, { "a.txt": "3\n" });
+    git(root, "commit", "-q", "-am", "three");
+    writeFiles(root, { "a.txt": "2\n" });
+    const now = (await changes(root)).files[0]!;
+    expect([now.additions, now.deletions]).toEqual([1, 1]);
+    expect(now.version).not.toBe(first);
+  });
+
+  test("compares a symlink by its target path, like Git, without reading the target", async () => {
+    const outside = realpathSync(
+      mkdtempSync(join(tmpdir(), "reviewbuddy-outside-")),
+    );
+    roots.push(outside);
+    writeFileSync(join(outside, "secret.txt"), "1\n2\n3\n");
+    const root = repo({ "a.txt": "a\n" });
+    symlinkSync(join(outside, "secret.txt"), join(root, "out"));
+
+    const first = (await changes(root)).files;
+    expect(summary(first)).toEqual([
+      {
+        path: "out",
+        oldPath: null,
+        status: "added",
+        additions: 1,
+        deletions: 0,
+      },
+    ]);
+    writeFileSync(join(outside, "secret.txt"), "changed\n");
+    expect((await changes(root)).files[0]!.version).toBe(first[0]!.version);
+  });
+
+  test("compares a file removed from the index but kept on disk with HEAD", async () => {
+    const root = repo({ "same.txt": "s\n", "edited.txt": "a\nb\nc\n" });
+    writeFiles(root, { "edited.txt": "a\nB\nc\n" });
+    git(root, "rm", "-q", "--cached", "same.txt", "edited.txt");
+    expect(summary((await changes(root)).files)).toEqual([
+      {
+        path: "edited.txt",
+        oldPath: null,
+        status: "modified",
+        additions: 1,
+        deletions: 1,
+      },
+    ]);
   });
 });
