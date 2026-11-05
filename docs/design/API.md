@@ -2,7 +2,7 @@
 
 **目的: SPA とサーバーの間の REST API と WebSocket のイベントの一覧を定める。リクエスト・応答・イベントの型の正本は `src/shared/` の TypeScript の型とし、本書は役割と振る舞いを書く。**
 
-- 対象の要件: F2 / F5 / F10 / F12 / F13 / A1 / A3 / A4 ([要件.md](./要件.md))
+- 対象の要件: F2 / F5 / F10 / F12 / F13 / A1 / A3 / A4 / A5 ([要件.md](./要件.md))
 - 共通の約束: パスはルートからの相対パス・POSIX 区切り、行番号は 1 始まり・両端を含む ([全体設計.md](./全体設計.md))
 - 認可: `GET /api/health` と `POST /api/login` 以外は、PIN を入力したブラウザの Cookie が必要 (無ければ `401`)。加えて、書き込み API と WebSocket はトークンが必要 ([セキュリティ.md](./セキュリティ.md))
 
@@ -19,6 +19,8 @@
 | `GET /api/tree` | ツリー順に並べたファイルのパスの配列 | — | M1 |
 | `GET /api/file?path=` | ファイルの種類・行の配列・表示用の HTML・mtime | — | M1 |
 | `GET /api/raw?path=` | ファイルの中身そのもの (画像の表示用) | — | M1 |
+| `GET /api/changes` | 未コミットの変更のあるファイルの一覧 (パス、元のパス、状態、行数、`version`)。Git の作業ツリーでなければ `git: false` | — | v0.6 |
+| `GET /api/diff?path=` | 1 ファイルの差分 (変更前・変更後の行の HTML、変更のまとまり、Markdown ならレンダリングした差分)。一覧に無いパスは `404` | — | v0.6 |
 | `GET /api/threads` | スレッドの一覧 (コメントを含む)。`?path=` で絞り込める | — | M3 |
 | `POST /api/threads` | スレッドを作る (パス、行範囲、表示 (`source` / `preview`)、本文、Nickname、`client_id`) | ○ | M3 |
 | `POST /api/threads/:id/comments` | リプライを足す | ○ | M3 |
@@ -57,10 +59,11 @@
 | `thread.created` / `thread.updated` / `thread.deleted` | スレッドの作成・コメントの追加 / 編集 / 削除・Resolve / Reopen・再アンカー・送信済みの記録・スレッドの削除 | スレッド (コメントを含む) か、その ID。コメントの変更もスレッド全体で送る (REST の応答と同じ形にして、クライアントの処理を 1 種類にするため) |
 | `file.changed` | 一覧に含まれるファイルの変更 | パス |
 | `tree.changed` | ファイルの追加・削除 | — (クライアントは `GET /api/tree` で取り直す) |
+| `changes.changed` | 監視でまとまった変更のたび (`.git/` の中の変化、つまりコミットを含む) | — (クライアントは `GET /api/changes` で取り直す) |
 | `session.ended` | セッションの終了 | — (クライアントは read-only のバナーを出す) |
 
 ### 再接続
 
 - 切れたら指数的に間隔を延ばして (最大 10 秒) 再接続する
-- 再接続したら `hello` を送り直し、`GET /api/threads` と `GET /api/tree` で取り直して整合させる (切れている間のイベントは再送しない)
+- 再接続したら `hello` を送り直し、`GET /api/threads`・`GET /api/tree`・`GET /api/changes` で取り直して整合させる (切れている間のイベントは再送しない)
 - 切れるたびに `GET /api/session` を確かめ、`401` なら (サーバーが再起動して Cookie が無効になった) ログインの画面に戻る
