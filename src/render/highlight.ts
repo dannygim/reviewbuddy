@@ -1,5 +1,6 @@
 import { createHighlighterCore, type HighlighterCore } from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
+import type { Range } from "../diff/words";
 import { escapeHtml } from "./html";
 
 // Static import paths so the bundler embeds only these grammars (Shiki's
@@ -69,26 +70,47 @@ export function splitLines(text: string): string[] {
   return lines;
 }
 
-/** Returns one HTML string per line, colored for both light and dark themes. */
+/**
+ * Returns one HTML string per line, colored for both light and dark themes.
+ * `marks` wraps ranges of each line in <span class="diff-word"> (changed words).
+ */
 export async function highlightLines(
   lines: string[],
   lang: string,
+  marks: (Range[] | undefined)[] = [],
 ): Promise<string[]> {
-  if (lang === "text") return lines.map(escapeHtml);
+  if (lang === "text") return lines.map((line, i) => mark(line, marks[i]));
   const hl = await getHighlighter();
   const { tokens } = hl.codeToTokens(lines.join("\n"), {
     lang,
     themes: { light: "github-light", dark: "github-dark" },
     defaultColor: "light-dark()",
   });
-  return lines.map((_, i) =>
-    (tokens[i] ?? [])
+  return lines.map((_, i) => {
+    let offset = 0;
+    return (tokens[i] ?? [])
       .map((token) => {
         const style = Object.entries(token.htmlStyle ?? {})
           .map(([key, value]) => `${key}:${value}`)
           .join(";");
-        return `<span style="${escapeHtml(style)}">${escapeHtml(token.content)}</span>`;
+        const html = mark(token.content, marks[i], offset);
+        offset += token.content.length;
+        return `<span style="${escapeHtml(style)}">${html}</span>`;
       })
-      .join(""),
-  );
+      .join("");
+  });
+}
+
+/** Escapes text that starts at `offset` in its line, wrapping the marked ranges. */
+function mark(text: string, ranges: Range[] = [], offset = 0): string {
+  let html = "";
+  let pos = 0;
+  for (const [start, end] of ranges) {
+    const from = Math.max(start - offset, pos);
+    const to = Math.min(end - offset, text.length);
+    if (to <= from) continue;
+    html += `${escapeHtml(text.slice(pos, from))}<span class="diff-word">${escapeHtml(text.slice(from, to))}</span>`;
+    pos = to;
+  }
+  return html + escapeHtml(text.slice(pos));
 }

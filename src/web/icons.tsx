@@ -64,3 +64,19 @@ export function CommentIcon({ filled }: { filled?: boolean }) {
     </Icon>
   );
 }
+
+export function CodeIcon() {
+  return (
+    <Icon>
+      <path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5" />
+    </Icon>
+  );
+}
+
+export function FileIcon() {
+  return (
+    <Icon>
+      <path d="M4 1.5h5.5L12.5 4.5v10h-8.5zM9.5 1.5v3h3M6.5 8h4M6.5 10.5h4" />
+    </Icon>
+  );
+}

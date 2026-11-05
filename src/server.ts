@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type AccessGate, authCookie, authCookieName } from "./auth";
+import { listChanges } from "./diff/changes";
+import { renderDiff } from "./diff/file-diff";
 import type { FileIndex } from "./files/file-index";
 import { resolveFile } from "./files/resolve";
 import { errorResponse, type Handler } from "./http";
@@ -14,7 +16,12 @@ import { ReviewError, type ReviewStore } from "./review/store";
 import { displayRoot } from "./root";
 import { isAllowedHost, isAllowedOrigin } from "./security";
 import type { SessionMeta } from "./session/session";
-import type { Health, SessionInfo, TreeResponse } from "./shared/api";
+import type {
+  ChangesResponse,
+  Health,
+  SessionInfo,
+  TreeResponse,
+} from "./shared/api";
 import { VERSION } from "./version";
 import { type Change, watchRoot } from "./watch/watcher";
 import index from "./web/index.html";
@@ -177,11 +184,24 @@ function listen(options: ServerOptions, port: number): AppServer {
     }
   };
 
+  // While watching, every browser shares one listing until the next change.
+  let changes: Promise<ChangesResponse> | null = null;
+  const currentChanges = () => {
+    if (!options.watch) return listChanges(root, files);
+    changes ??= listChanges(root, files).catch((error: unknown) => {
+      changes = null;
+      throw error;
+    });
+    return changes;
+  };
+
   const onChange = async (change: Change) => {
     const gone = change.files.some((path) => !existsSync(join(root, path)));
     if ((change.tree || gone) && (await files.refresh())) {
       hub.publish({ type: "tree.changed" });
     }
+    changes = null;
+    hub.publish({ type: "changes.changed" });
     for (const path of change.files) {
       hub.publish({ type: "file.changed", path });
       if (!session.readOnly) reanchorPath(path);
@@ -232,6 +252,25 @@ function listen(options: ServerOptions, port: number): AppServer {
         if (!abs) return errorResponse(404, "File not found");
         return Response.json(
           await renderFile(abs, path, {
+            maxHighlightBytes: options.maxHighlightBytes,
+            isListed: (p) => files.has(p),
+          }),
+        );
+      }),
+      "/api/changes": guard(async () => Response.json(await currentChanges())),
+      "/api/diff": guard(async (req) => {
+        const path = new URL(req.url).searchParams.get("path") ?? "";
+        const change = (await currentChanges()).files.find(
+          (f) => f.path === path,
+        );
+        // Like /api/file: only listed files, and never through a symlink out of the root.
+        const abs =
+          change?.status === "deleted" ? null : resolveFile(root, files, path);
+        if (!change || (change.status !== "deleted" && !abs)) {
+          return errorResponse(404, "File not found");
+        }
+        return Response.json(
+          await renderDiff(root, change, abs, {
             maxHighlightBytes: options.maxHighlightBytes,
             isListed: (p) => files.has(p),
           }),
