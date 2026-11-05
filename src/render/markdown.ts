@@ -144,6 +144,56 @@ export async function renderMarkdown(
   source: string,
   options: MarkdownOptions,
 ): Promise<string> {
+  const { tokens, render } = await parse(source, options);
+  return render(tokens);
+}
+
+/** A top-level block (paragraph, list, table, ...) and its source text. */
+export type MarkdownBlock = { tokens: Token[]; source: string };
+
+/**
+ * The top-level blocks of a document, for comparing two versions block by
+ * block. Rendering every block's tokens in order gives renderMarkdown's HTML.
+ */
+export async function markdownBlocks(
+  source: string,
+  options: MarkdownOptions,
+): Promise<{ blocks: MarkdownBlock[]; render: (tokens: Token[]) => string }> {
+  const { tokens, render } = await parse(source, options);
+  const lines = source.split("\n");
+  return { blocks: splitBlocks(tokens, 0, lines), render };
+}
+
+/**
+ * Splits tokens into the blocks that open at `level` (with everything inside
+ * them). The source of a block is its lines without trailing blank lines.
+ */
+export function splitBlocks(
+  tokens: Token[],
+  level: number,
+  lines: string[],
+): MarkdownBlock[] {
+  const blocks: MarkdownBlock[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const first = tokens[i]!;
+    if (first.level !== level || first.nesting === -1) continue;
+    let end = i;
+    if (first.nesting === 1) {
+      let depth = 0;
+      do depth += tokens[end++]!.nesting;
+      while (depth > 0);
+      end--;
+    }
+    const [start, stop] = first.map ?? [0, 0];
+    const own = lines.slice(start, stop);
+    while (own.length > 0 && own.at(-1)!.trim() === "") own.pop();
+    blocks.push({ tokens: tokens.slice(i, end + 1), source: own.join("\n") });
+    i = end;
+  }
+  return blocks;
+}
+
+async function parse(source: string, options: MarkdownOptions) {
   const env = { ...options };
   const tokens = md.parse(source, env);
   // Highlighting is async, so do it before the synchronous render.
@@ -155,5 +205,6 @@ export async function renderMarkdown(
       lineHtml: await highlightLines(splitLines(token.content), lang),
     };
   }
-  return md.renderer.render(tokens, md.options, env);
+  const render = (list: Token[]) => md.renderer.render(list, md.options, env);
+  return { tokens, render };
 }

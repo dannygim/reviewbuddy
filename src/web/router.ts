@@ -13,6 +13,25 @@ export function useDocPath(): string | null {
   );
 }
 
+const CHANGES_HASH = "#/changes";
+
+/** Whether the URL hash shows the Changes view (`#/changes`). */
+export function useChangesOpen(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => window.location.hash === CHANGES_HASH,
+  );
+}
+
+export function openChanges(): void {
+  window.location.hash = CHANGES_HASH;
+}
+
+/** Leaves the Changes view for a file, or for no file (the root README.md). */
+export function openFiles(path: string | null): void {
+  window.location.hash = path ? hashForDocPath(path) : "";
+}
+
 export function openDoc(path: string): void {
   window.location.hash = hashForDocPath(path);
 }

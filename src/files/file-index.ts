@@ -46,6 +46,16 @@ export class FileIndex {
     return this.#set.has(path);
   }
 
+  /** Whether a path is never listed: inside .git/ or matched by viewer.exclude. */
+  excludes(path: string): boolean {
+    return (
+      isDotGit(path) ||
+      ignore()
+        .add(this.options.exclude ?? [])
+        .ignores(path)
+    );
+  }
+
   /** Re-lists the files and returns whether the list changed. */
   async refresh(): Promise<boolean> {
     const next = await listFiles(this.root, this.options);
@@ -74,7 +84,7 @@ async function run(args: string[]): Promise<string | null> {
   }
 }
 
-async function isInsideGitWorkTree(root: string): Promise<boolean> {
+export async function isInsideGitWorkTree(root: string): Promise<boolean> {
   const out = await run([
     "git",
     "-C",

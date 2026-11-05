@@ -38,3 +38,25 @@ describe("highlightLines", () => {
     ]);
   });
 });
+
+describe("highlightLines with marks", () => {
+  const marked = (html: string) =>
+    [...html.matchAll(/<span class="diff-word">([^<]*)<\/span>/g)]
+      .map((m) => m[1])
+      .join("");
+
+  test("wraps a marked range that spans several tokens", async () => {
+    const [html] = await highlightLines(["const a = 1;"], "typescript", [
+      [[6, 11]],
+    ]);
+    expect(marked(html!)).toBe("a = 1");
+    expect(html!.replace(/<[^>]*>/g, "")).toBe("const a = 1;");
+  });
+
+  test("marks escaped plain text", async () => {
+    expect(await highlightLines(["a<b", "c"], "text", [[[1, 2]]])).toEqual([
+      'a<span class="diff-word">&lt;</span>b',
+      "c",
+    ]);
+  });
+});

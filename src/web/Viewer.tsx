@@ -45,7 +45,7 @@ export function Viewer({ path }: { path: string }) {
   );
 }
 
-function CommentPaneButton() {
+export function CommentPaneButton() {
   const [open, setOpen] = usePaneOpen("commentPane");
   return (
     <button

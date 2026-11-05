@@ -12,6 +12,16 @@
   --danger: light-dark(#d1242f, #f85149);
   --line-selected: light-dark(#fff8c5, #3b2e0a);
   --accent: light-dark(#0969da, #4493f8);
+  --diff-add-fg: light-dark(#1a7f37, #3fb950);
+  --diff-add-bg: light-dark(#dafbe1, rgb(46 160 67 / 15%));
+  --diff-add-num: light-dark(#ccffd8, rgb(63 185 80 / 30%));
+  --diff-add-word: light-dark(#abf2bc, rgb(46 160 67 / 40%));
+  --diff-del-fg: light-dark(#d1242f, #f85149);
+  --diff-del-bg: light-dark(#ffebe9, rgb(248 81 73 / 10%));
+  --diff-del-num: light-dark(#ffd7d5, rgb(248 81 73 / 30%));
+  --diff-del-word: light-dark(rgb(255 129 130 / 40%), rgb(248 81 73 / 40%));
+  --diff-mod: light-dark(#d4a72c, #bb8009);
+  --diff-hunk-bg: light-dark(#ddf4ff, rgb(56 139 253 / 10%));
 }
 
 /* Display mode: Light and Dark pin the scheme; System leaves it to the OS. */
@@ -927,4 +937,237 @@ button:disabled {
   font-style: var(--shiki-light-font-style);
   font-weight: var(--shiki-light-font-weight);
   text-decoration: var(--shiki-light-text-decoration);
+}
+
+/* Changes view (docs/design/差分表示.md) */
+.app-switch {
+  align-self: center;
+  font-size: 0.875rem;
+}
+
+.changes > .viewer-header {
+  font-weight: 400;
+}
+
+.diff-counts {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.diff-count-add {
+  color: var(--diff-add-fg);
+}
+
+.diff-count-del {
+  color: var(--diff-del-fg);
+}
+
+.diff-card {
+  margin: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.diff-card-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px 6px 0 0;
+  background: var(--hover);
+  font-size: 0.875rem;
+}
+
+.diff-card-header:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-card-toggle {
+  display: flex;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diff-card-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-card-header .viewer-tabs button {
+  display: inline-flex;
+  padding: 0.125rem 0.5rem;
+}
+
+.diff-viewed {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* The +/- sign is drawn here so that copying the code leaves it out. */
+.code.diff .code-src::before {
+  content: attr(data-sign);
+  display: inline-block;
+  width: 1.25em;
+  color: var(--muted);
+}
+
+.code.diff tr.diff-add td {
+  background: var(--diff-add-bg);
+}
+
+.code.diff tr.diff-add td.code-ln {
+  background: var(--diff-add-num);
+}
+
+.code.diff tr.diff-del td {
+  background: var(--diff-del-bg);
+}
+
+.code.diff tr.diff-del td.code-ln {
+  background: var(--diff-del-num);
+}
+
+.code.diff tr.diff-add .diff-word {
+  border-radius: 2px;
+  background: var(--diff-add-word);
+}
+
+.code.diff tr.diff-del .diff-word {
+  border-radius: 2px;
+  background: var(--diff-del-word);
+}
+
+.code.diff tr.diff-hunk td {
+  background: var(--diff-hunk-bg);
+  color: var(--muted);
+}
+
+.code.diff.commentable tr:not([data-new]) .code-ln {
+  cursor: default;
+}
+
+.code.diff tr[data-comment-target] td {
+  background: var(--selected);
+}
+
+.code.diff tr.selected td {
+  background: var(--line-selected);
+}
+
+.diff-expand {
+  text-align: center;
+}
+
+.diff-expand button {
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.diff-expand button:hover {
+  color: var(--accent);
+}
+
+/* Rendered Markdown diff */
+.markdown .diff-block {
+  margin-bottom: 1em;
+  padding: 0.125rem 0.75rem;
+}
+
+.markdown .diff-block > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown :is(.diff-add, li.diff-add) {
+  background: var(--diff-add-bg);
+}
+
+.markdown :is(.diff-del, li.diff-del) {
+  background: var(--diff-del-bg);
+  text-decoration: line-through;
+}
+
+.markdown .diff-block.diff-bar {
+  border-left: 4px solid;
+  background: none;
+  text-decoration: none;
+}
+
+.markdown .diff-bar.diff-add {
+  border-color: var(--diff-add-fg);
+}
+
+.markdown .diff-bar.diff-del {
+  border-color: var(--diff-del-fg);
+}
+
+.markdown .diff-mod {
+  border-left: 4px solid var(--diff-mod);
+}
+
+.markdown ins {
+  border-radius: 2px;
+  background: var(--diff-add-word);
+  text-decoration: none;
+}
+
+.markdown del {
+  border-radius: 2px;
+  background: var(--diff-del-word);
+}
+
+/* Changed files tree */
+.tree-status {
+  display: inline-block;
+  width: 1.25em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tree-status[data-status="added"] {
+  color: var(--diff-add-fg);
+}
+
+.tree-status[data-status="deleted"] {
+  color: var(--diff-del-fg);
+}
+
+.tree-status[data-status="modified"] {
+  color: var(--diff-mod);
+}
+
+.tree-status[data-status="renamed"] {
+  color: var(--accent);
+}
+
+.tree-viewed {
+  color: var(--muted);
+}
+
+.tree-check {
+  margin-left: 0.25rem;
+  color: var(--diff-add-fg);
+}
+
+.tree-file .diff-counts {
+  margin-left: 0.5rem;
 }

@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SessionInfo } from "../shared/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChangesResponse, SessionInfo } from "../shared/api";
 import type { ServerEvent } from "../shared/events";
 import { buildTree, findReadme } from "../shared/tree";
 import {
   endSession,
+  fetchChanges,
   fetchSession,
   fetchThreads,
   fetchTree,
   needsPin,
 } from "./api";
+import { ChangesTree } from "./ChangesTree";
+import { ChangesView } from "./ChangesView";
 import { type Reviewer, ReviewerContext } from "./context";
 import { DisplayModeMenu } from "./DisplayModeMenu";
 import { EndSessionDialog } from "./EndSessionDialog";
@@ -22,9 +25,17 @@ import { usePaneOpen } from "./panes";
 import { initials, presenceStore, uniquePeople, usePresence } from "./presence";
 import { announce, announceView, connectRealtime } from "./realtime";
 import { ReviewPanel } from "./ReviewPanel";
-import { openDoc, replaceDoc, useDocPath } from "./router";
+import {
+  openChanges,
+  openDoc,
+  openFiles,
+  replaceDoc,
+  useChangesOpen,
+  useDocPath,
+} from "./router";
 import { threadStore, useThreads } from "./store";
 import { Viewer } from "./Viewer";
+import { useViewed } from "./viewed";
 
 export function App() {
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -40,11 +51,29 @@ export function App() {
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
+  const changesOpen = useChangesOpen();
+  const [changes, setChanges] = useState<ChangesResponse | null>(null);
+  const [viewed, setViewed] = useViewed(
+    session?.id ?? "",
+    changes?.files ?? [],
+  );
+  // A click in the changes tree: open that card and scroll to it.
+  const [reveal, setReveal] = useState<{ path: string } | null>(null);
+  // Where "Files" goes back to from the Changes view.
+  const lastDoc = useRef<string | null>(null);
+  useEffect(() => {
+    if (docPath) lastDoc.current = docPath;
+  }, [docPath]);
 
   const refetch = useCallback(async () => {
-    const [tree, threads] = await Promise.all([fetchTree(), fetchThreads()]);
+    const [tree, threads, changes] = await Promise.all([
+      fetchTree(),
+      fetchThreads(),
+      fetchChanges(),
+    ]);
     setFiles(tree.files);
     threadStore.replaceAll(threads);
+    setChanges(changes);
   }, []);
 
   // A 401 asks for the PIN; dropping the session also stops the WebSocket.
@@ -102,6 +131,9 @@ export function App() {
         case "tree.changed":
           void fetchTree().then((tree) => setFiles(tree.files));
           break;
+        case "changes.changed":
+          void fetchChanges().then(setChanges);
+          break;
         case "session.ended":
           setSession((s) => s && { ...s, status: "ended", readOnly: true });
           break;
@@ -131,8 +163,8 @@ export function App() {
     [files],
   );
   useEffect(() => {
-    if (!docPath && rootReadme) replaceDoc(rootReadme);
-  }, [docPath, rootReadme]);
+    if (!docPath && !changesOpen && rootReadme) replaceDoc(rootReadme);
+  }, [docPath, changesOpen, rootReadme]);
 
   const threadCounts = useMemo(() => {
     const counts = new Map<string, ThreadCounts>();
@@ -189,6 +221,26 @@ export function App() {
           {session && (
             <span className="app-session muted">session {session.id}</span>
           )}
+          {session && changes?.git && (
+            <span className="viewer-tabs app-switch" role="tablist">
+              <button
+                role="tab"
+                data-action="files"
+                aria-selected={!changesOpen}
+                onClick={() => changesOpen && openFiles(lastDoc.current)}
+              >
+                Files
+              </button>
+              <button
+                role="tab"
+                data-action="changes"
+                aria-selected={changesOpen}
+                onClick={() => changesOpen || openChanges()}
+              >
+                Changes {changes.files.length}
+              </button>
+            </span>
+          )}
           <span className="app-spacer" />
           {session && (
             <button
@@ -237,26 +289,50 @@ export function App() {
           {/* Hidden, not removed, so expanded directories stay expanded. */}
           <aside className="app-sidebar" hidden={!treeOpen}>
             {files && (
-              <FileTree
-                files={files}
-                selected={docPath}
-                threads={threadCounts}
-                viewers={viewers}
-                changed={changed}
-                onSelect={openDoc}
+              <div hidden={changesOpen}>
+                <FileTree
+                  files={files}
+                  selected={docPath}
+                  threads={threadCounts}
+                  viewers={viewers}
+                  changed={changed}
+                  onSelect={openDoc}
+                />
+              </div>
+            )}
+            {changesOpen && changes && (
+              <ChangesTree
+                files={changes.files}
+                viewed={viewed}
+                onSelect={(path) => setReveal({ path })}
               />
             )}
           </aside>
           <main className="app-main">
-            {docPath
-              ? // Loaded only once the PIN was accepted.
-                session && <Viewer key={docPath} path={docPath} />
-              : files &&
-                !rootReadme && (
+            {changesOpen
+              ? session &&
+                changes &&
+                (changes.git ? (
+                  <ChangesView
+                    files={changes.files}
+                    viewed={viewed}
+                    onViewed={setViewed}
+                    reveal={reveal}
+                  />
+                ) : (
                   <p className="viewer-note">
-                    Select a file to start reviewing.
+                    This directory is not in a Git repository.
                   </p>
-                )}
+                ))
+              : docPath
+                ? // Loaded only once the PIN was accepted.
+                  session && <Viewer key={docPath} path={docPath} />
+                : files &&
+                  !rootReadme && (
+                    <p className="viewer-note">
+                      Select a file to start reviewing.
+                    </p>
+                  )}
           </main>
           {reviewing && session && (
             <ReviewPanel

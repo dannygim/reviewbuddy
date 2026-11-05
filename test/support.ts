@@ -1,6 +1,6 @@
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { openReviewDb } from "../src/review/db";
 import { ReviewStore } from "../src/review/store";
 import type { SessionContext } from "../src/server";
@@ -48,4 +48,40 @@ export function webView(size: { width: number; height: number }): Bun.WebView {
   const backend = process.env.REVIEWBUDDY_E2E_BACKEND as
     "chrome" | "webkit" | undefined;
   return new Bun.WebView(backend ? { ...size, backend } : size);
+}
+
+/** Runs git in `cwd` for a test, with an identity so commits work anywhere (CI). */
+export function git(cwd: string, ...args: string[]): string {
+  const proc = Bun.spawnSync(
+    [
+      "git",
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      ...args,
+    ],
+    { cwd, stdout: "pipe", stderr: "pipe" },
+  );
+  if (proc.exitCode !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${proc.stderr.toString()}`);
+  }
+  return proc.stdout.toString();
+}
+
+/** A new repository in a temporary directory with `files` in its first commit. */
+export function gitRepo(files: Record<string, string>): string {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-git-")));
+  git(root, "init", "-q");
+  writeFiles(root, files);
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", "init");
+  return root;
+}
+
+export function writeFiles(root: string, files: Record<string, string>): void {
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), text);
+  }
 }

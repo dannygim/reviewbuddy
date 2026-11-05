@@ -1,6 +1,8 @@
 import type {
+  ChangesResponse,
   Comment,
   ErrorResponse,
+  FileDiff,
   FileView,
   PromptResponse,
   SessionInfo,
@@ -71,6 +73,9 @@ export const fetchFile = (path: string) =>
 export const rawUrl = (path: string) =>
   `/api/raw?path=${encodeURIComponent(path)}`;
 export const fetchThreads = () => request<Thread[]>("/api/threads");
+export const fetchChanges = () => request<ChangesResponse>("/api/changes");
+export const fetchDiff = (path: string) =>
+  request<FileDiff>(`/api/diff?path=${encodeURIComponent(path)}`);
 
 type Author = Pick<Comment, "author" | "clientId">;
 

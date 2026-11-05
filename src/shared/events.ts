@@ -14,6 +14,8 @@ export type ServerEvent =
   | { type: "thread.deleted"; threadId: string }
   | { type: "file.changed"; path: string }
   | { type: "tree.changed" }
+  /** Something changed on disk or in .git/ (e.g. a commit): re-fetch the changes. */
+  | { type: "changes.changed" }
   | { type: "session.ended" };
 
 /** Messages a browser sends on the WebSocket. */
