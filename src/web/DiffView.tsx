@@ -255,11 +255,13 @@ function ExpandButtons({
 }) {
   if (row.hidden === 0) return null;
   if (row.hidden <= STEP) {
+    // Above the first change there is no hunk to extend down: extend its own up.
+    const side = row.gap === 0 ? "bottom" : "top";
     return (
       <button
         aria-label="Expand all"
         title={`Show ${row.hidden} hidden lines`}
-        onClick={() => onReveal(row.gap, "top", row.hidden)}
+        onClick={() => onReveal(row.gap, side, row.hidden)}
       >
         ↕
       </button>

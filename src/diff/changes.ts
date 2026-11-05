@@ -1,15 +1,19 @@
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 import { type FileIndex, isInsideGitWorkTree } from "../files/file-index";
+import { resolveFile } from "../files/resolve";
 import { splitLines } from "../render/highlight";
 import type { ChangedFile, ChangesResponse } from "../shared/api";
 import { compareTreePaths } from "../shared/tree";
-import { gitText, isBinary, splitNul } from "./git";
+import { lineChanges } from "./file-diff";
+import { gitOutput, gitText, isBinary, splitNul } from "./git";
 
 /** A change before its lines are counted (undefined) and its version is known. */
 type Entry = Omit<ChangedFile, "version" | "additions" | "deletions"> & {
   additions: number | null | undefined;
   deletions: number | null | undefined;
+  /** The file's blob in HEAD, or null when HEAD does not have it. */
+  base: string | null;
 };
 
 /**
@@ -25,17 +29,43 @@ export async function listChanges(
   const entries: Entry[] =
     head === null
       ? index.paths().map(added)
-      : (await Promise.all([tracked(root), untracked(root)])).flat();
-  const files = entries
-    .filter((e) =>
-      e.status === "deleted" ? !index.excludes(e.path) : index.has(e.path),
+      : withRemovedFromIndex(
+          ...(await Promise.all([tracked(root), untracked(root)])),
+        );
+  const files = (
+    await Promise.all(
+      entries
+        .filter((e) =>
+          e.status === "deleted" ? !index.excludes(e.path) : index.has(e.path),
+        )
+        .map((e) => withVersion(root, index, e)),
     )
-    .map((e) => withVersion(root, e))
-    .filter((file) => file !== null);
+  ).filter((file) => file !== null);
   return {
     git: true,
     files: files.sort((a, b) => compareTreePaths(a.path, b.path)),
   };
+}
+
+/**
+ * The work-tree side of a change as Git compares it: a symlink's target path,
+ * never the file it points to. Null when the file is gone or not listed.
+ */
+export function readWorkTree(
+  root: string,
+  index: FileIndex,
+  path: string,
+): Uint8Array | null {
+  const abs = join(root, path);
+  try {
+    if (lstatSync(abs).isSymbolicLink()) {
+      return index.has(path) ? readlinkSync(abs, { encoding: "buffer" }) : null;
+    }
+    const real = resolveFile(root, index, path);
+    return real ? readFileSync(real) : null;
+  } catch {
+    return null; // deleted since git listed it
+  }
 }
 
 const added = (path: string): Entry => ({
@@ -44,23 +74,27 @@ const added = (path: string): Entry => ({
   status: "added",
   additions: undefined,
   deletions: undefined,
+  base: null,
 });
 
 async function tracked(root: string): Promise<Entry[]> {
   const diff = (format: string) =>
     gitText(root, ["diff-index", "HEAD", "-M", "--relative", format, "-z"]);
   // --numstat compares contents, so files that were only touched are left
-  // out; --name-status (stat only) adds the status letters.
-  const [numstat, nameStatus] = await Promise.all([
-    diff("--numstat"),
-    diff("--name-status"),
-  ]);
-  const letters = new Map<string, string>();
-  const names = splitNul(nameStatus ?? "");
-  for (let i = 0; i < names.length;) {
-    const letter = names[i++]![0]!;
+  // out; --raw (stat only) adds the status letters and the blobs in HEAD.
+  const [numstat, raw] = await Promise.all([diff("--numstat"), diff("--raw")]);
+  const heads = new Map<string, { letter: string; base: string | null }>();
+  const fields = splitNul(raw ?? "");
+  for (let i = 0; i < fields.length;) {
+    // ":<old mode> <new mode> <old blob> <new blob> <status>", then the path,
+    // or both paths for a rename or copy.
+    const [, , base, , status] = fields[i++]!.split(" ");
+    const letter = status![0]!;
     if (letter === "R" || letter === "C") i++; // the old path
-    letters.set(names[i++]!, letter);
+    heads.set(fields[i++]!, {
+      letter,
+      base: letter === "A" ? null : base!,
+    });
   }
   const entries: Entry[] = [];
   const records = splitNul(numstat ?? "");
@@ -74,7 +108,7 @@ async function tracked(root: string): Promise<Entry[]> {
     const single = record.slice(second + 1);
     const oldPath = single === "" ? records[i++]! : null;
     const path = single === "" ? records[i++]! : single;
-    const letter = letters.get(path);
+    const { letter, base } = heads.get(path) ?? { letter: "M", base: null };
     entries.push({
       path,
       oldPath,
@@ -88,6 +122,7 @@ async function tracked(root: string): Promise<Entry[]> {
               : "modified",
       additions: add === "-" ? null : Number(add),
       deletions: del === "-" ? null : Number(del),
+      base,
     });
   }
   return entries;
@@ -103,39 +138,84 @@ async function untracked(root: string): Promise<Entry[]> {
   return splitNul(out ?? "").map(added);
 }
 
-/** Counts the lines of new files and adds the version; null if the file is gone. */
-function withVersion(root: string, entry: Entry): ChangedFile | null {
+/**
+ * A file removed from the index (`git rm --cached`) but kept on disk is both a
+ * deletion for Git and untracked. Only HEAD and the work tree count, so it is
+ * one modified file, its lines counted against HEAD (and left out if equal).
+ */
+function withRemovedFromIndex(changed: Entry[], others: Entry[]): Entry[] {
+  const onDisk = new Set(others.map((e) => e.path));
+  const kept = new Set<string>();
+  const entries = changed.map((e): Entry => {
+    if (e.status !== "deleted" || !onDisk.has(e.path)) return e;
+    kept.add(e.path);
+    return {
+      ...e,
+      status: "modified",
+      additions: undefined,
+      deletions: undefined,
+    };
+  });
+  return [...entries, ...others.filter((e) => !kept.has(e.path))];
+}
+
+/**
+ * Counts the lines where Git did not and adds the version; null if the file is
+ * gone or equal to HEAD.
+ */
+async function withVersion(
+  root: string,
+  index: FileIndex,
+  entry: Entry,
+): Promise<ChangedFile | null> {
+  const { base, ...file } = entry;
   if (entry.status === "deleted") {
     return {
-      ...entry,
+      ...file,
       additions: entry.additions ?? null,
       deletions: entry.deletions ?? null,
-      version: `deleted:${entry.deletions}`,
+      version: `deleted:${base}`,
     };
   }
-  let bytes: Uint8Array;
-  try {
-    bytes = readFileSync(join(root, entry.path));
-  } catch {
-    return null; // deleted since git listed it
-  }
+  const bytes = readWorkTree(root, index, entry.path);
+  if (!bytes) return null;
   let { additions, deletions } = entry;
   if (additions === undefined) {
-    const text = isBinary(bytes) ? null : new TextDecoder().decode(bytes);
-    additions =
-      text === null ? null : text === "" ? 0 : splitLines(text).length;
-    deletions = text === null ? null : 0;
+    const old = base
+      ? ((await gitOutput(root, ["cat-file", "blob", base])) ??
+        new Uint8Array())
+      : new Uint8Array();
+    if (base && Buffer.from(old).equals(bytes)) return null;
+    [additions, deletions] = countLines(old, bytes);
   }
   return {
-    ...entry,
+    ...file,
     additions,
     deletions: deletions ?? null,
     version: [
       entry.status,
       entry.oldPath,
+      base,
       additions,
       deletions,
       Bun.hash(bytes),
     ].join(":"),
   };
+}
+
+/** Added and deleted lines, or nulls for a binary file. */
+function countLines(
+  old: Uint8Array,
+  bytes: Uint8Array,
+): [number | null, number | null] {
+  if (isBinary(old) || isBinary(bytes)) return [null, null];
+  const lines = (b: Uint8Array) => {
+    const text = new TextDecoder().decode(b);
+    return text === "" ? [] : splitLines(text);
+  };
+  const changes = lineChanges(lines(old), lines(bytes));
+  return [
+    changes.reduce((sum, c) => sum + c.newCount, 0),
+    changes.reduce((sum, c) => sum + c.oldCount, 0),
+  ];
 }

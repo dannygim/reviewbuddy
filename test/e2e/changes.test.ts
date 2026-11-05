@@ -129,6 +129,25 @@ test("shows the uncommitted changes like a pull request", async () => {
   );
 }, 60_000);
 
+test("expands the lines above the first change into its hunk", async () => {
+  await using view = webView({ width: 1280, height: 900 });
+  await open(view);
+  const app = card("src/app.ts");
+  await waitFor(
+    view,
+    `!!${q(`${app} tr.diff-hunk [aria-label="Expand all"]`)}`,
+  );
+  await view.click(`${app} tr.diff-hunk [aria-label="Expand all"]`);
+  await waitFor(view, `!!${q(`${app} tr[data-new="1"]`)}`);
+  // The header stays first and now starts at line 1.
+  expect(await view.evaluate(`${q(`${app} tbody tr`)}.className`)).toBe(
+    "diff-hunk",
+  );
+  expect(await text(view, `${app} tr.diff-hunk .code-src`)).toStartWith(
+    "@@ -1,23 +1,24 @@",
+  );
+}, 60_000);
+
 test("keeps Viewed across a reload and closes the viewed card", async () => {
   await using view = webView({ width: 1280, height: 900 });
   await open(view);

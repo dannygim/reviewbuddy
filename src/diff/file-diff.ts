@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
 import { isImagePath } from "../render/file-view";
 import { highlightLines, splitLines } from "../render/highlight";
 import { detectLanguage } from "../render/language";
 import type { ChangedFile, DiffChange, FileDiff } from "../shared/api";
 import { gitOutput, gitText, isBinary } from "./git";
 import { renderMarkdownDiff } from "./markdown-diff";
+import { diffSequences } from "./myers";
 import { type Range, wordRanges } from "./words";
 
 export type DiffOptions = {
@@ -14,6 +14,8 @@ export type DiffOptions = {
 };
 
 const HUNK = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$/gm;
+/** Above this many changed lines, lineChanges replaces a stretch as a whole. */
+const MAX_LINE_COST = 1000;
 
 /** The changes in a `-U0` patch, from its hunk headers. */
 export function parseHunkHeaders(patch: string): DiffChange[] {
@@ -27,31 +29,70 @@ export function parseHunkHeaders(patch: string): DiffChange[] {
 }
 
 /**
- * The diff of one changed file (docs/design/差分表示.md). `newPath` is the
- * file's real path in the work tree, or null for a deleted file.
+ * The line changes from old to new, found here instead of by Git (so without
+ * function names), in the same form as the hunks of a `-U0` patch.
+ */
+export function lineChanges(
+  oldLines: string[],
+  newLines: string[],
+): DiffChange[] {
+  const changes: DiffChange[] = [];
+  const edits = diffSequences(oldLines, newLines, MAX_LINE_COST);
+  for (let i = 0; i < edits.length; i++) {
+    const edit = edits[i]!;
+    if (edit.type === "equal") continue;
+    const oldCount = edit.type === "delete" ? edit.count : 0;
+    const next = edits[i + 1];
+    let newCount = edit.type === "insert" ? edit.count : 0;
+    if (edit.type === "delete" && next?.type === "insert") {
+      newCount = next.count;
+      i++;
+    }
+    // Like Git, an empty side starts at the line before the change.
+    changes.push({
+      oldStart: oldCount ? edit.a + 1 : edit.a,
+      oldCount,
+      newStart: newCount ? edit.b + 1 : edit.b,
+      newCount,
+      context: "",
+    });
+  }
+  return changes;
+}
+
+/**
+ * The diff of one changed file (docs/design/差分表示.md). `newBytes` is the
+ * work-tree side (from readWorkTree), or null for a deleted file.
  */
 export async function renderDiff(
   root: string,
   change: ChangedFile,
-  newPath: string | null,
+  newBytes: Uint8Array | null,
   options: DiffOptions,
 ): Promise<FileDiff> {
   const { path } = change;
   const oldPath = change.oldPath ?? path;
   if (isImagePath(path)) return { kind: "binary", path };
+  // One commit for both the old side and Git's hunks, even if HEAD moves.
+  const head =
+    (await gitText(root, ["rev-parse", "--verify", "-q", "HEAD"]))?.trim() ??
+    null;
   const oldBytes =
-    change.status === "added"
+    change.status === "added" || head === null
       ? new Uint8Array()
-      : ((await gitOutput(root, ["cat-file", "blob", `HEAD:./${oldPath}`])) ??
-        new Uint8Array());
-  const newBytes = newPath ? readFileSync(newPath) : new Uint8Array();
+      : ((await gitOutput(root, [
+          "cat-file",
+          "blob",
+          `${head}:./${oldPath}`,
+        ])) ?? new Uint8Array());
+  newBytes ??= new Uint8Array();
   if (isBinary(oldBytes) || isBinary(newBytes)) return { kind: "binary", path };
 
   const oldText = new TextDecoder().decode(oldBytes);
   const newText = new TextDecoder().decode(newBytes);
   const oldLines = oldText === "" ? [] : splitLines(oldText);
   const newLines = newText === "" ? [] : splitLines(newText);
-  const changes = await diffChanges(root, change, oldLines, newLines);
+  const changes = await diffChanges(root, head, change, oldLines, newLines);
 
   // Pair the i-th deleted line of each change with its i-th added line.
   const oldMarks: Range[][] = [];
@@ -88,11 +129,12 @@ export async function renderDiff(
 
 async function diffChanges(
   root: string,
+  head: string | null,
   change: ChangedFile,
   oldLines: string[],
   newLines: string[],
 ): Promise<DiffChange[]> {
-  if (change.status === "added" || change.status === "deleted") {
+  if (change.status === "added" || change.status === "deleted" || !head) {
     if (oldLines.length === 0 && newLines.length === 0) return [];
     return [
       {
@@ -107,7 +149,7 @@ async function diffChanges(
   const paths = change.oldPath ? [change.oldPath, change.path] : [change.path];
   const patch = await gitText(root, [
     "diff-index",
-    "HEAD",
+    head,
     "-M",
     "--relative",
     "-p",
@@ -116,7 +158,48 @@ async function diffChanges(
     "--no-ext-diff",
     "--no-textconv",
     "--",
-    ...paths,
+    ...paths.map((p) => `:(literal)${p}`),
   ]);
-  return parseHunkHeaders(patch ?? "");
+  const changes = parseHunkHeaders(patch ?? "");
+  // Git read the work tree again, and compares what its index has: if the
+  // file changed meanwhile or the index does not have it (`git rm --cached`),
+  // its hunks describe other lines.
+  return describes(patch ?? "", changes, oldLines, newLines)
+    ? changes
+    : lineChanges(oldLines, newLines);
+}
+
+/** Whether a `-U0` patch removes and adds exactly these lines. */
+function describes(
+  patch: string,
+  changes: DiffChange[],
+  oldLines: string[],
+  newLines: string[],
+): boolean {
+  const removed: string[] = [];
+  const added: string[] = [];
+  let inHunk = false;
+  for (const line of patch.split("\n")) {
+    if (line.startsWith("diff ")) inHunk = false;
+    else if (line.startsWith("@@ ")) inHunk = true;
+    else if (inHunk && line.startsWith("-")) removed.push(line.slice(1));
+    else if (inHunk && line.startsWith("+")) added.push(line.slice(1));
+  }
+  const expected = (lines: string[], start: number, count: number) =>
+    count ? lines.slice(start - 1, start - 1 + count) : [];
+  const same = (a: string[], b: string[]) =>
+    a.length === b.length &&
+    a.every((line, i) => line.replace(/\r$/, "") === b[i]);
+  const delta = changes.reduce((n, c) => n + c.newCount - c.oldCount, 0);
+  return (
+    oldLines.length + delta === newLines.length &&
+    same(
+      removed,
+      changes.flatMap((c) => expected(oldLines, c.oldStart, c.oldCount)),
+    ) &&
+    same(
+      added,
+      changes.flatMap((c) => expected(newLines, c.newStart, c.newCount)),
+    )
+  );
 }
