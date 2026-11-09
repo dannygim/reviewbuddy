@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 type Props = {
   submitLabel: string;
@@ -13,6 +13,12 @@ export function Composer(props: Props) {
   const [body, setBody] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
+
+  // Not autoFocus: that focuses before the Comment Pane places a new card,
+  // while it still sits at the top of the file, and the browser scrolls
+  // there. Effects run after the pane's layout, once it is beside its lines.
+  useEffect(() => textarea.current?.focus(), []);
 
   const submit = async () => {
     if (!body.trim() || busy) return;
@@ -38,7 +44,7 @@ export function Composer(props: Props) {
   return (
     <div className="composer">
       <textarea
-        autoFocus
+        ref={textarea}
         rows={3}
         value={body}
         placeholder={placeholder ?? "Leave a comment"}

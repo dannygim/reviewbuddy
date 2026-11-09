@@ -21,6 +21,17 @@ writeFileSync(
     "",
   ),
 );
+// Longer than the window, to comment far down.
+writeFileSync(
+  join(root, "src/long.ts"),
+  Array.from({ length: 150 }, (_, i) => `const v${i + 1} = ${i + 1};\n`).join(
+    "",
+  ),
+);
+writeFileSync(
+  join(root, "long.md"),
+  Array.from({ length: 60 }, (_, i) => `Paragraph ${i + 1}.\n\n`).join(""),
+);
 
 let server: AppServer;
 
@@ -120,4 +131,64 @@ test("comments on source lines, then replies and resolves", async () => {
     false,
   );
   expect(await text(view, ".app-me")).toBe("Alice (you)");
+}, 60_000);
+
+test("starts a comment far down a file where it is, without scrolling to the top", async () => {
+  await using view = webView({ width: 1100, height: 800 });
+  await view.navigate(new URL("/#/doc/long.md", server.url).href);
+  await view.evaluate(`localStorage.setItem("reviewbuddy.nickname", "Alice")`);
+  await view.evaluate("window.beforeReload = true");
+  await view.reload();
+  await waitFor(view, `!window.beforeReload`);
+
+  const scrollTop = `document.querySelector(".app-main").scrollTop`;
+  // Where the composer's card was when its text box got the focus: a new
+  // card is at the top of the file until it is placed, and focusing it there
+  // scrolls the file to the top (Chrome).
+  const watchFocus = () =>
+    view.evaluate(`(() => {
+      window.focusedCardTop = undefined;
+      document.addEventListener("focusin", (e) => {
+        window.focusedCardTop = e.target.closest(".comment-card")?.style.top ?? null;
+      }, { capture: true, once: true });
+    })()`);
+  const expectComposerInPlace = async (before: number) => {
+    await waitFor(view, `window.focusedCardTop !== undefined`);
+    expect(await view.evaluate("window.focusedCardTop")).not.toBe("");
+    expect(
+      await view.evaluate(
+        `document.activeElement === document.querySelector(".comment-pane .composer textarea")`,
+      ),
+    ).toBe(true);
+    await Bun.sleep(400); // a jump would have happened by now
+    expect(await view.evaluate(scrollTop)).toBe(before);
+  };
+
+  // A Preview block.
+  const block = `document.querySelectorAll(".markdown p[data-src-start]")[49]`;
+  await waitFor(view, `!!${block}`);
+  await view.evaluate(`${block}.scrollIntoView({ block: "center" })`);
+  const previewTop = await view.evaluate<number>(scrollTop);
+  expect(previewTop).toBeGreaterThan(0);
+  await view.evaluate(
+    `${block}.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))`,
+  );
+  await waitFor(
+    view,
+    `Math.abs(document.querySelector(".block-add")?.getBoundingClientRect().top - ${block}.getBoundingClientRect().top) < 1`,
+  );
+  await watchFocus();
+  await view.click(".block-add");
+  await expectComposerInPlace(previewTop);
+
+  // Source lines.
+  await view.navigate(new URL("/?source#/doc/src/long.ts", server.url).href);
+  const line = `document.querySelector('tr[data-line="120"] .code-ln')`;
+  await waitFor(view, `!!${line}`);
+  await view.evaluate(`${line}.scrollIntoView({ block: "center" })`);
+  const sourceTop = await view.evaluate<number>(scrollTop);
+  expect(sourceTop).toBeGreaterThan(0);
+  await watchFocus();
+  await view.click('tr[data-line="120"] .code-ln');
+  await expectComposerInPlace(sourceTop);
 }, 60_000);
