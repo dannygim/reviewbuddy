@@ -10,7 +10,7 @@ import {
 } from "../test/support";
 import { FileIndex } from "./files/file-index";
 import { type AppServer, startServer } from "./server";
-import type { ChangesResponse, FileDiff } from "./shared/api";
+import type { BranchesResponse, ChangesResponse, FileDiff } from "./shared/api";
 import type { ServerEvent } from "./shared/events";
 
 const roots: string[] = [];
@@ -71,6 +71,75 @@ describe("GET /api/changes and /api/diff", () => {
     const { get } = await serve({ "a.ts": "x;\n" });
     expect((await get("/api/diff?path=a.ts")).status).toBe(404);
     expect((await get("/api/diff?path=../etc/passwd")).status).toBe(404);
+  });
+});
+
+describe("comparing with a branch", () => {
+  /** On `feature`, a commit ahead of `main` (also `origin/main`), with a.ts edited. */
+  async function serveFeature() {
+    const served = await serve({ "a.ts": "x;\n", "b.ts": "y;\n" });
+    const { root } = served;
+    git(root, "branch", "-q", "-M", "main");
+    git(root, "update-ref", "refs/remotes/origin/main", "main");
+    git(
+      root,
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/main",
+    );
+    git(root, "checkout", "-q", "-b", "feature");
+    writeFiles(root, { "b.ts": "y;\nw;\n" });
+    git(root, "commit", "-q", "-am", "feature");
+    writeFiles(root, { "a.ts": "x;\nz;\n" });
+    return served;
+  }
+
+  test("lists the branches, local and remote, without the current one", async () => {
+    const { get } = await serveFeature();
+    const branches = await get<BranchesResponse>("/api/branches");
+    expect(branches).toEqual({
+      status: 200,
+      body: { local: ["main"], remote: ["origin/main"] },
+    });
+  });
+
+  test("lists and diffs the changes since where HEAD left the branch", async () => {
+    const { get } = await serveFeature();
+    const changes = await get<ChangesResponse>("/api/changes?base=main");
+    expect(changes.body.files.map((f) => f.path)).toEqual(["a.ts", "b.ts"]);
+    expect(
+      (await get<ChangesResponse>("/api/changes")).body.files.map(
+        (f) => f.path,
+      ),
+    ).toEqual(["a.ts"]);
+
+    const diff = await get<FileDiff>("/api/diff?path=b.ts&base=origin%2Fmain");
+    expect(diff.status).toBe(200);
+    expect(diff.body).toMatchObject({
+      kind: "text",
+      changes: [{ oldStart: 1, oldCount: 0, newStart: 2, newCount: 1 }],
+    });
+    expect((await get("/api/diff?path=b.ts")).status).toBe(404);
+  });
+
+  test("returns 404 for a name that is not a listed branch", async () => {
+    const { get } = await serveFeature();
+    for (const name of ["nope", "feature", "--output=x", "HEAD~1"]) {
+      const query = `base=${encodeURIComponent(name)}`;
+      expect((await get(`/api/changes?${query}`)).status).toBe(404);
+      expect((await get(`/api/diff?path=a.ts&${query}`)).status).toBe(404);
+    }
+  });
+
+  test("returns 400 for a branch with no common ancestor", async () => {
+    const { root, get } = await serveFeature();
+    const tree = git(root, "rev-parse", "HEAD^{tree}").trim();
+    const lonely = git(root, "commit-tree", tree, "-m", "lonely").trim();
+    git(root, "update-ref", "refs/heads/lonely", lonely);
+    const res = await get<{ error: string }>("/api/changes?base=lonely");
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "No common ancestor with lonely." });
+    expect((await get("/api/diff?path=a.ts&base=lonely")).status).toBe(400);
   });
 });
 

@@ -44,11 +44,14 @@ export type FileView =
 
 export type ChangeStatus = "added" | "modified" | "deleted" | "renamed";
 
-/** A file with uncommitted changes (HEAD against the work tree). */
+/**
+ * A file with changes: HEAD (or where HEAD left the branch compared with)
+ * against the work tree.
+ */
 export type ChangedFile = {
   /** The path in the work tree; for a deleted file, the path it had. */
   path: string;
-  /** The path in HEAD of a renamed file, else null. */
+  /** The path in the base commit of a renamed file, else null. */
   oldPath: string | null;
   status: ChangeStatus;
   /** Added and deleted lines; null for binary files. */
@@ -57,6 +60,9 @@ export type ChangedFile = {
   /** Changes whenever the change does; a Viewed mark holds only while it matches. */
   version: string;
 };
+
+/** Branches the Changes view can compare with, by short name, without the current one. */
+export type BranchesResponse = { local: string[]; remote: string[] };
 
 export type ChangesResponse = {
   /** False when the root is not in a Git work tree (no Changes view). */

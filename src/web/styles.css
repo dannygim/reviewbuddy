@@ -949,6 +949,30 @@ button:disabled {
   font-weight: 400;
 }
 
+.changes-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.changes-base {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.changes-base select {
+  max-width: 20rem;
+  padding: 0.125rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
 .diff-counts {
   font-size: 0.75rem;
   white-space: nowrap;

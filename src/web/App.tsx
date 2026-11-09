@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChangesResponse, SessionInfo } from "../shared/api";
+import type {
+  BranchesResponse,
+  ChangesResponse,
+  SessionInfo,
+} from "../shared/api";
 import type { ServerEvent } from "../shared/events";
 import { buildTree, findReadme } from "../shared/tree";
 import {
+  ApiError,
   endSession,
+  fetchBranches,
   fetchChanges,
   fetchSession,
   fetchThreads,
@@ -29,13 +35,22 @@ import {
   openChanges,
   openDoc,
   openFiles,
+  replaceChangesBase,
   replaceDoc,
+  useChangesBase,
   useChangesOpen,
   useDocPath,
 } from "./router";
 import { threadStore, useThreads } from "./store";
 import { Viewer } from "./Viewer";
 import { useViewed } from "./viewed";
+
+/** The changes against a branch (null: HEAD), or why there are none. */
+type Listing = {
+  base: string | null;
+  changes: ChangesResponse;
+  error: string | null;
+};
 
 export function App() {
   const [session, setSession] = useState<SessionInfo | null>(null);
@@ -52,9 +67,23 @@ export function App() {
   const participants = usePresence();
   const docPath = useDocPath();
   const changesOpen = useChangesOpen();
-  const [changes, setChanges] = useState<ChangesResponse | null>(null);
+  const urlBase = useChangesBase();
+  // Where "Changes" goes back to from the files: the branch last compared with.
+  const lastBase = useRef<string | null>(null);
+  useEffect(() => {
+    if (changesOpen) lastBase.current = urlBase;
+  }, [changesOpen, urlBase]);
+  const base = changesOpen ? urlBase : lastBase.current;
+  const baseRef = useRef(base);
+  const [listing, setListing] = useState<Listing | null>(null);
+  const changes = listing?.changes ?? null;
+  const [branches, setBranches] = useState<BranchesResponse>({
+    local: [],
+    remote: [],
+  });
   const [viewed, setViewed] = useViewed(
     session?.id ?? "",
+    listing?.base ?? null,
     changes?.files ?? [],
   );
   // A click in the changes tree: open that card and scroll to it.
@@ -65,16 +94,36 @@ export function App() {
     if (docPath) lastDoc.current = docPath;
   }, [docPath]);
 
+  // The changes against the branch compared with now, and the branches.
+  const loadChanges = useCallback(async () => {
+    const base = baseRef.current;
+    const [listed, branches] = await Promise.all([
+      fetchChanges(base).then(
+        (changes) => ({ changes, error: null }),
+        (error: unknown) => {
+          // A branch that is gone or unrelated: shown in the Changes view,
+          // where another one can be chosen.
+          if (!base || !(error instanceof ApiError) || needsPin(error))
+            throw error;
+          return { changes: { git: true, files: [] }, error: error.message };
+        },
+      ),
+      fetchBranches(),
+    ]);
+    if (base !== baseRef.current) return; // another branch was chosen meanwhile
+    setListing({ base, ...listed });
+    setBranches(branches);
+  }, []);
+
   const refetch = useCallback(async () => {
-    const [tree, threads, changes] = await Promise.all([
+    const [tree, threads] = await Promise.all([
       fetchTree(),
       fetchThreads(),
-      fetchChanges(),
+      loadChanges(),
     ]);
     setFiles(tree.files);
     threadStore.replaceAll(threads);
-    setChanges(changes);
-  }, []);
+  }, [loadChanges]);
 
   // A 401 asks for the PIN; dropping the session also stops the WebSocket.
   const lock = useCallback(() => {
@@ -97,6 +146,15 @@ export function App() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The first listing comes with load().
+  useEffect(() => {
+    if (baseRef.current === base) return;
+    baseRef.current = base;
+    void loadChanges().catch((error) => {
+      if (needsPin(error)) lock();
+    });
+  }, [base, loadChanges, lock]);
 
   const token = session?.token;
   useEffect(() => {
@@ -132,7 +190,7 @@ export function App() {
           void fetchTree().then((tree) => setFiles(tree.files));
           break;
         case "changes.changed":
-          void fetchChanges().then(setChanges);
+          void loadChanges();
           break;
         case "session.ended":
           setSession((s) => s && { ...s, status: "ended", readOnly: true });
@@ -149,7 +207,7 @@ export function App() {
           if (needsPin(error)) lock();
         }),
     });
-  }, [token, refetch, lock]);
+  }, [token, refetch, loadChanges, lock]);
 
   useEffect(() => {
     if (nickname) announce(nickname, clientId);
@@ -235,7 +293,7 @@ export function App() {
                 role="tab"
                 data-action="changes"
                 aria-selected={changesOpen}
-                onClick={() => changesOpen || openChanges()}
+                onClick={() => changesOpen || openChanges(lastBase.current)}
               >
                 Changes {changes.files.length}
               </button>
@@ -311,18 +369,25 @@ export function App() {
           <main className="app-main">
             {changesOpen
               ? session &&
-                changes &&
-                (changes.git ? (
+                listing &&
+                (!listing.changes.git ? (
+                  <p className="viewer-note">
+                    This directory is not in a Git repository.
+                  </p>
+                ) : listing.base === base ? (
                   <ChangesView
-                    files={changes.files}
+                    key={base ?? ""}
+                    base={base}
+                    branches={branches}
+                    onBase={replaceChangesBase}
+                    error={listing.error}
+                    files={listing.changes.files}
                     viewed={viewed}
                     onViewed={setViewed}
                     reveal={reveal}
                   />
                 ) : (
-                  <p className="viewer-note">
-                    This directory is not in a Git repository.
-                  </p>
+                  <p className="viewer-note">Loading…</p>
                 ))
               : docPath
                 ? // Loaded only once the PIN was accepted.

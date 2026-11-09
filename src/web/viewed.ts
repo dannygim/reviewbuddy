@@ -45,16 +45,24 @@ export function markViewed(
   return next;
 }
 
+/** Where the marks are stored: per session, and per branch compared with. */
+export function viewedKey(sessionId: string, base: string | null): string {
+  const key = `reviewbuddy.viewed.${sessionId}`;
+  return base ? `${key}.${base}` : key;
+}
+
 /**
- * Viewed marks for this browser, per session (docs/design/差分表示.md): kept
- * in localStorage only, never sent to the server.
+ * Viewed marks for this browser, per session and branch compared with
+ * (docs/design/差分表示.md): kept in localStorage only, never sent to the
+ * server.
  */
 export function useViewed(
   sessionId: string,
+  base: string | null,
   files: ChangedFile[],
 ): [Set<string>, (path: string, viewed: boolean) => void] {
-  const key = `reviewbuddy.viewed.${sessionId}`;
-  // The session is known only once loaded, so the key can change.
+  const key = viewedKey(sessionId, base);
+  // The session is known only once loaded, and the branch can change.
   const stored = useMemo(() => parseViewed(read(key)), [key]);
   const [saved, setSaved] = useState<{ key: string; marks: ViewedMarks }>();
   const marks = saved?.key === key ? saved.marks : stored;

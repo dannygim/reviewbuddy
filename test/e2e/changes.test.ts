@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import { FileIndex } from "../../src/files/file-index";
 import { type AppServer, startServer } from "../../src/server";
 import type { Thread } from "../../src/shared/api";
-import { gitRepo, testSession, webView, writeFiles } from "../support";
+import { git, gitRepo, testSession, webView, writeFiles } from "../support";
 
 const lines = (n: number, value = (i: number) => String(i)) =>
   Array.from(
@@ -16,6 +16,12 @@ const root = gitRepo({
   "doc/guide.md": "# Guide\n\nHello world\n\n- keep\n- old item\n",
   "README.md": "# Readme\n",
 });
+// HEAD is one commit ahead of main: compared with main, that commit is a change too.
+git(root, "branch", "-q", "-M", "main");
+git(root, "checkout", "-q", "-b", "feature");
+writeFiles(root, { "src/feature.ts": "export const feature = 1;\n" });
+git(root, "add", "src/feature.ts");
+git(root, "commit", "-q", "-m", "feature");
 // Line 15 changes, and a line is inserted after line 20 (new line 21).
 const edited = lines(30, (i) => (i === 15 ? "150" : String(i))).replace(
   "const v20 = 20;\n",
@@ -237,4 +243,44 @@ test("goes back to the files from the Changes view", async () => {
   await view.click('[data-action="files"]');
   await waitFor(view, `location.hash === "#/doc/README.md"`);
   await waitFor(view, `!!${q('[aria-label="Files"] [data-path="README.md"]')}`);
+}, 60_000);
+
+test("compares with the branch chosen in the list, kept in the URL", async () => {
+  await using view = webView({ width: 1280, height: 900 });
+  await open(view);
+  const select = q(".changes-base select");
+  expect(
+    await view.evaluate(`[...${select}.options].map((o) => o.value).join()`),
+  ).toBe(",main");
+  const choose = (value: string) =>
+    view.evaluate(
+      `(${select}.value = ${JSON.stringify(value)}, ${select}.dispatchEvent(new Event("change", { bubbles: true })))`,
+    );
+  const cards = `document.querySelectorAll(".diff-card").length`;
+
+  await choose("main");
+  await waitFor(view, `${cards} === 4`);
+  expect(await view.evaluate("location.hash")).toBe("#/changes?base=main");
+  expect(await text(view, '[data-action="changes"]')).toBe("Changes 4");
+  await waitFor(
+    view,
+    `!!${q(`${card("src/feature.ts")} tr.diff-add[data-new="1"]`)}`,
+  );
+
+  await view.evaluate("window.beforeReload = true");
+  await view.reload();
+  await waitFor(
+    view,
+    `!window.beforeReload && ${select}?.value === "main" && ${cards} === 4`,
+  );
+
+  // Back from the files, to the same branch.
+  await view.click('[data-action="files"]');
+  await waitFor(view, `location.hash.startsWith("#/doc/")`);
+  await view.click('[data-action="changes"]');
+  await waitFor(view, `location.hash === "#/changes?base=main"`);
+
+  await choose("");
+  await waitFor(view, `${cards} === 3`);
+  expect(await view.evaluate("location.hash")).toBe("#/changes");
 }, 60_000);

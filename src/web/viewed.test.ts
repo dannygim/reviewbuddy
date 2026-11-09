@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ChangedFile } from "../shared/api";
-import { markViewed, parseViewed, viewedPaths } from "./viewed";
+import { markViewed, parseViewed, viewedKey, viewedPaths } from "./viewed";
 
 const file = (path: string, version: string): ChangedFile => ({
   path,
@@ -36,4 +36,11 @@ test("marks and unmarks a file, dropping files no longer changed", () => {
     "b.ts": "v2",
   });
   expect(markViewed(marks, files, "a.ts", false)).toEqual({});
+});
+
+test("keeps the marks of each branch compared with apart", () => {
+  expect(viewedKey("s1", null)).toBe("reviewbuddy.viewed.s1");
+  expect(viewedKey("s1", "origin/main")).toBe(
+    "reviewbuddy.viewed.s1.origin/main",
+  );
 });

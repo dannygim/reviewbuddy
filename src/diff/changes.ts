@@ -5,6 +5,7 @@ import { resolveFile } from "../files/resolve";
 import { splitLines } from "../render/highlight";
 import type { ChangedFile, ChangesResponse } from "../shared/api";
 import { compareTreePaths } from "../shared/tree";
+import { BaseError, type Branch, baseCommit } from "./branches";
 import { lineChanges } from "./file-diff";
 import { gitOutput, gitText, isBinary, splitNul } from "./git";
 
@@ -12,25 +13,28 @@ import { gitOutput, gitText, isBinary, splitNul } from "./git";
 type Entry = Omit<ChangedFile, "version" | "additions" | "deletions"> & {
   additions: number | null | undefined;
   deletions: number | null | undefined;
-  /** The file's blob in HEAD, or null when HEAD does not have it. */
+  /** The file's blob in the base commit, or null when it does not have it. */
   base: string | null;
 };
 
 /**
- * The files whose content differs between HEAD and the work tree, limited to
- * what the file tree shows (docs/design/差分表示.md).
+ * The files whose content differs between HEAD (or where HEAD left `base`)
+ * and the work tree, limited to what the file tree shows
+ * (docs/design/差分表示.md).
  */
 export async function listChanges(
   root: string,
   index: FileIndex,
+  base: Branch | null = null,
 ): Promise<ChangesResponse> {
   if (!(await isInsideGitWorkTree(root))) return { git: false, files: [] };
-  const head = await gitText(root, ["rev-parse", "--verify", "-q", "HEAD"]);
+  const commit = await baseCommit(root, base?.ref ?? null);
+  if (base && commit === null) throw new BaseError(base.name);
   const entries: Entry[] =
-    head === null
+    commit === null
       ? index.paths().map(added)
       : withRemovedFromIndex(
-          ...(await Promise.all([tracked(root), untracked(root)])),
+          ...(await Promise.all([tracked(root, commit), untracked(root)])),
         );
   const files = (
     await Promise.all(
@@ -77,11 +81,11 @@ const added = (path: string): Entry => ({
   base: null,
 });
 
-async function tracked(root: string): Promise<Entry[]> {
+async function tracked(root: string, commit: string): Promise<Entry[]> {
   const diff = (format: string) =>
-    gitText(root, ["diff-index", "HEAD", "-M", "--relative", format, "-z"]);
+    gitText(root, ["diff-index", commit, "-M", "--relative", format, "-z"]);
   // --numstat compares contents, so files that were only touched are left
-  // out; --raw (stat only) adds the status letters and the blobs in HEAD.
+  // out; --raw (stat only) adds the status letters and the blobs in the commit.
   const [numstat, raw] = await Promise.all([diff("--numstat"), diff("--raw")]);
   const heads = new Map<string, { letter: string; base: string | null }>();
   const fields = splitNul(raw ?? "");

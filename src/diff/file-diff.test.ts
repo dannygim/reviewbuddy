@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { git, gitRepo, writeFiles } from "../../test/support";
 import { FileIndex } from "../files/file-index";
 import type { FileDiff } from "../shared/api";
+import type { Branch } from "./branches";
 import { listChanges, readWorkTree } from "./changes";
 import { parseHunkHeaders, renderDiff } from "./file-diff";
 
@@ -49,12 +50,13 @@ describe("renderDiff", () => {
     files: Record<string, string>,
     edit: (root: string) => void,
     path: string,
+    base?: Branch,
   ): Promise<FileDiff> {
     const root = gitRepo(files);
     roots.push(root);
     edit(root);
     const index = await FileIndex.create(root);
-    const change = (await listChanges(root, index)).files.find(
+    const change = (await listChanges(root, index, base)).files.find(
       (f) => f.path === path,
     )!;
     const newBytes =
@@ -64,6 +66,7 @@ describe("renderDiff", () => {
     return renderDiff(root, change, newBytes, {
       maxHighlightBytes: 2_000_000,
       isListed: () => false,
+      base,
     });
   }
 
@@ -118,6 +121,31 @@ describe("renderDiff", () => {
     expect(marked(diff.oldLines[1]!)).toEqual(["2"]);
     expect(marked(diff.newLines[1]!)).toEqual(["3"]);
     expect(diff.richHtml).toBeNull();
+  });
+
+  test("compares with where HEAD left a branch, committed and uncommitted lines together", async () => {
+    const main = { name: "main", ref: "refs/heads/main", remote: false };
+    const diff = await diffOf(
+      { "a.txt": "1\n2\n3\n4\n5\n6\n7\n8\n9\n" },
+      (root) => {
+        git(root, "branch", "-q", "-M", "main");
+        git(root, "checkout", "-q", "-b", "feature");
+        writeFiles(root, { "a.txt": "1\nTWO\n3\n4\n5\n6\n7\n8\n9\n" });
+        git(root, "commit", "-q", "-am", "feature");
+        writeFiles(root, { "a.txt": "1\nTWO\n3\n4\n5\n6\n7\n8\nNINE\n" });
+      },
+      "a.txt",
+      main,
+    );
+    if (diff.kind !== "text") throw new Error("expected text");
+    expect(diff.oldLines.map(text)).toContain("2");
+    expect(diff.newLines.map(text)).toContain("TWO");
+    expect(
+      diff.changes.map((c) => [c.oldStart, c.oldCount, c.newStart, c.newCount]),
+    ).toEqual([
+      [2, 1, 2, 1],
+      [9, 1, 9, 1],
+    ]);
   });
 
   test("shows an untracked file as all added", async () => {

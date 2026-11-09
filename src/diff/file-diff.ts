@@ -2,6 +2,7 @@ import { isImagePath } from "../render/file-view";
 import { highlightLines, splitLines } from "../render/highlight";
 import { detectLanguage } from "../render/language";
 import type { ChangedFile, DiffChange, FileDiff } from "../shared/api";
+import { BaseError, type Branch, baseCommit } from "./branches";
 import { gitOutput, gitText, isBinary } from "./git";
 import { renderMarkdownDiff } from "./markdown-diff";
 import { diffSequences } from "./myers";
@@ -11,6 +12,8 @@ export type DiffOptions = {
   maxHighlightBytes: number;
   /** Whether a root-relative path is listed; used to rewrite Markdown links. */
   isListed: (path: string) => boolean;
+  /** Compare with where HEAD left this branch instead of with HEAD. */
+  base?: Branch | null;
 };
 
 const HUNK = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$/gm;
@@ -74,16 +77,15 @@ export async function renderDiff(
   const oldPath = change.oldPath ?? path;
   if (isImagePath(path)) return { kind: "binary", path };
   // One commit for both the old side and Git's hunks, even if HEAD moves.
-  const head =
-    (await gitText(root, ["rev-parse", "--verify", "-q", "HEAD"]))?.trim() ??
-    null;
+  const commit = await baseCommit(root, options.base?.ref ?? null);
+  if (options.base && commit === null) throw new BaseError(options.base.name);
   const oldBytes =
-    change.status === "added" || head === null
+    change.status === "added" || commit === null
       ? new Uint8Array()
       : ((await gitOutput(root, [
           "cat-file",
           "blob",
-          `${head}:./${oldPath}`,
+          `${commit}:./${oldPath}`,
         ])) ?? new Uint8Array());
   newBytes ??= new Uint8Array();
   if (isBinary(oldBytes) || isBinary(newBytes)) return { kind: "binary", path };
@@ -92,7 +94,7 @@ export async function renderDiff(
   const newText = new TextDecoder().decode(newBytes);
   const oldLines = oldText === "" ? [] : splitLines(oldText);
   const newLines = newText === "" ? [] : splitLines(newText);
-  const changes = await diffChanges(root, head, change, oldLines, newLines);
+  const changes = await diffChanges(root, commit, change, oldLines, newLines);
 
   // Pair the i-th deleted line of each change with its i-th added line.
   const oldMarks: Range[][] = [];
@@ -129,12 +131,12 @@ export async function renderDiff(
 
 async function diffChanges(
   root: string,
-  head: string | null,
+  commit: string | null,
   change: ChangedFile,
   oldLines: string[],
   newLines: string[],
 ): Promise<DiffChange[]> {
-  if (change.status === "added" || change.status === "deleted" || !head) {
+  if (change.status === "added" || change.status === "deleted" || !commit) {
     if (oldLines.length === 0 && newLines.length === 0) return [];
     return [
       {
@@ -149,7 +151,7 @@ async function diffChanges(
   const paths = change.oldPath ? [change.oldPath, change.path] : [change.path];
   const patch = await gitText(root, [
     "diff-index",
-    head,
+    commit,
     "-M",
     "--relative",
     "-p",

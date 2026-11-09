@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ChangedFile, FileDiff } from "../shared/api";
+import type { BranchesResponse, ChangedFile, FileDiff } from "../shared/api";
 import { fetchDiff } from "./api";
 import { DiffView } from "./DiffView";
 import { CodeIcon, FileIcon } from "./icons";
@@ -19,15 +19,25 @@ const STATUS_LABELS: Record<ChangedFile["status"], string | null> = {
 const size = (f: ChangedFile) => (f.additions ?? 0) + (f.deletions ?? 0);
 
 /**
- * Every uncommitted change, one card per file (docs/design/差分表示.md).
- * `reveal` opens a card and scrolls to it (a click in the changes tree).
+ * Every change against HEAD or the branch in `base`, one card per file
+ * (docs/design/差分表示.md). `reveal` opens a card and scrolls to it (a click
+ * in the changes tree). `error` replaces the cards when `base` cannot be
+ * compared with.
  */
 export function ChangesView({
+  base,
+  branches,
+  onBase,
+  error,
   files,
   viewed,
   onViewed,
   reveal,
 }: {
+  base: string | null;
+  branches: BranchesResponse;
+  onBase: (base: string | null) => void;
+  error: string | null;
   files: ChangedFile[];
   viewed: ReadonlySet<string>;
   onViewed: (path: string, viewed: boolean) => void;
@@ -56,13 +66,41 @@ export function ChangesView({
 
   const additions = files.reduce((n, f) => n + (f.additions ?? 0), 0);
   const deletions = files.reduce((n, f) => n + (f.deletions ?? 0), 0);
+  const listed = [...branches.local, ...branches.remote];
+  const group = (label: string, names: string[]) =>
+    names.length > 0 && (
+      <optgroup label={label}>
+        {names.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </optgroup>
+    );
   return (
     <section className="viewer changes">
       <header className="viewer-header">
-        <span>
-          {files.length} file{files.length === 1 ? "" : "s"} changed{" "}
-          <span className="diff-count-add">+{additions}</span>{" "}
-          <span className="diff-count-del">−{deletions}</span>
+        <span className="changes-summary">
+          <label className="changes-base">
+            Compare with
+            <select
+              value={base ?? ""}
+              onChange={(event) => onBase(event.target.value || null)}
+            >
+              <option value="">HEAD (uncommitted)</option>
+              {/* A branch in the URL that is gone stays selected. */}
+              {base && !listed.includes(base) && (
+                <option value={base}>{base}</option>
+              )}
+              {group("Local", branches.local)}
+              {group("Remote", branches.remote)}
+            </select>
+          </label>
+          <span>
+            {files.length} file{files.length === 1 ? "" : "s"} changed{" "}
+            <span className="diff-count-add">+{additions}</span>{" "}
+            <span className="diff-count-del">−{deletions}</span>
+          </span>
         </span>
         <span className="viewer-actions">
           <span className="muted" data-role="viewed-count">
@@ -72,12 +110,19 @@ export function ChangesView({
           <CommentPaneButton />
         </span>
       </header>
-      {files.length === 0 && (
-        <p className="viewer-note">No uncommitted changes.</p>
+      {error ? (
+        <p className="viewer-note">{error}</p>
+      ) : (
+        files.length === 0 && (
+          <p className="viewer-note">
+            {base ? `No changes against ${base}.` : "No uncommitted changes."}
+          </p>
+        )
       )}
       {files.map((file) => (
         <DiffCard
           key={file.path}
+          base={base}
           file={file}
           open={isOpen(file)}
           onOpen={(open) => setOpen(file, open)}
@@ -95,12 +140,14 @@ export function ChangesView({
 type State = { diff: FileDiff } | { error: string } | null;
 
 function DiffCard({
+  base,
   file,
   open,
   onOpen,
   viewed,
   onViewed,
 }: {
+  base: string | null;
   file: ChangedFile;
   open: boolean;
   onOpen: (open: boolean) => void;
@@ -115,14 +162,14 @@ function DiffCard({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    fetchDiff(file.path).then(
+    fetchDiff(file.path, base).then(
       (diff) => cancelled || setState({ diff }),
       (error: Error) => cancelled || setState({ error: error.message }),
     );
     return () => {
       cancelled = true;
     };
-  }, [open, file.path, file.version]);
+  }, [open, base, file.path, file.version]);
 
   const diff = state && "diff" in state ? state.diff : null;
   const rich =

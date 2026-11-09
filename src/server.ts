@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type AccessGate, authCookie, authCookieName } from "./auth";
+import { BaseError, type Branch, listBranches } from "./diff/branches";
 import { listChanges, readWorkTree } from "./diff/changes";
 import { gitDirsOutside } from "./diff/git";
 import { renderDiff } from "./diff/file-diff";
@@ -18,6 +19,7 @@ import { displayRoot } from "./root";
 import { isAllowedHost, isAllowedOrigin } from "./security";
 import type { SessionMeta } from "./session/session";
 import type {
+  BranchesResponse,
   ChangesResponse,
   Health,
   SessionInfo,
@@ -185,23 +187,52 @@ function listen(options: ServerOptions, port: number): AppServer {
     }
   };
 
-  // While watching, every browser shares one listing until the next change.
-  let changes: Promise<ChangesResponse> | null = null;
-  const currentChanges = () => {
-    if (!options.watch) return listChanges(root, files);
-    changes ??= listChanges(root, files).catch((error: unknown) => {
-      changes = null;
-      throw error;
-    });
-    return changes;
+  // While watching, every browser shares one listing per base until the next change.
+  const changes = new Map<string, Promise<ChangesResponse>>();
+  const currentChanges = (base: Branch | null) => {
+    if (!options.watch) return listChanges(root, files, base);
+    const key = base?.ref ?? "";
+    let listing = changes.get(key);
+    if (!listing) {
+      listing = listChanges(root, files, base).catch((error: unknown) => {
+        changes.delete(key);
+        throw error;
+      });
+      changes.set(key, listing);
+    }
+    return listing;
   };
+
+  /**
+   * Runs `handler` with the branch in `?base=` (null without one). Only listed
+   * names reach git, as full refnames; one with no common ancestor is a 400.
+   */
+  const comparing =
+    (
+      handler: (req: Request, base: Branch | null) => Promise<Response>,
+    ): Handler =>
+    async (req) => {
+      const name = new URL(req.url).searchParams.get("base");
+      const base = name
+        ? (await listBranches(root)).find((b) => b.name === name)
+        : null;
+      if (base === undefined)
+        return errorResponse(404, `No branch named ${name}.`);
+      try {
+        return await handler(req, base);
+      } catch (error) {
+        if (error instanceof BaseError)
+          return errorResponse(400, error.message);
+        throw error;
+      }
+    };
 
   const onChange = async (change: Change) => {
     const gone = change.files.some((path) => !existsSync(join(root, path)));
     if ((change.tree || gone) && (await files.refresh())) {
       hub.publish({ type: "tree.changed" });
     }
-    changes = null;
+    changes.clear();
     hub.publish({ type: "changes.changed" });
     for (const path of change.files) {
       hub.publish({ type: "file.changed", path });
@@ -258,25 +289,43 @@ function listen(options: ServerOptions, port: number): AppServer {
           }),
         );
       }),
-      "/api/changes": guard(async () => Response.json(await currentChanges())),
-      "/api/diff": guard(async (req) => {
-        const path = new URL(req.url).searchParams.get("path") ?? "";
-        const change = (await currentChanges()).files.find(
-          (f) => f.path === path,
-        );
-        // Only listed files, and a symlink as its target path (never the file it points to).
-        const bytes =
-          change?.status === "deleted" ? null : readWorkTree(root, files, path);
-        if (!change || (change.status !== "deleted" && !bytes)) {
-          return errorResponse(404, "File not found");
-        }
-        return Response.json(
-          await renderDiff(root, change, bytes, {
-            maxHighlightBytes: options.maxHighlightBytes,
-            isListed: (p) => files.has(p),
-          }),
-        );
+      "/api/branches": guard(async () => {
+        const branches = await listBranches(root);
+        const names = (remote: boolean) =>
+          branches.filter((b) => b.remote === remote).map((b) => b.name);
+        return Response.json({
+          local: names(false),
+          remote: names(true),
+        } satisfies BranchesResponse);
       }),
+      "/api/changes": guard(
+        comparing(async (_req, base) =>
+          Response.json(await currentChanges(base)),
+        ),
+      ),
+      "/api/diff": guard(
+        comparing(async (req, base) => {
+          const path = new URL(req.url).searchParams.get("path") ?? "";
+          const change = (await currentChanges(base)).files.find(
+            (f) => f.path === path,
+          );
+          // Only listed files, and a symlink as its target path (never the file it points to).
+          const bytes =
+            change?.status === "deleted"
+              ? null
+              : readWorkTree(root, files, path);
+          if (!change || (change.status !== "deleted" && !bytes)) {
+            return errorResponse(404, "File not found");
+          }
+          return Response.json(
+            await renderDiff(root, change, bytes, {
+              maxHighlightBytes: options.maxHighlightBytes,
+              isListed: (p) => files.has(p),
+              base,
+            }),
+          );
+        }),
+      ),
       "/api/raw": guard((req) => {
         const { path, abs } = fileFrom(req);
         if (!abs || !isImagePath(path))

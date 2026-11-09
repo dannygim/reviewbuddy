@@ -1,4 +1,5 @@
 import type {
+  BranchesResponse,
   ChangesResponse,
   Comment,
   ErrorResponse,
@@ -73,9 +74,16 @@ export const fetchFile = (path: string) =>
 export const rawUrl = (path: string) =>
   `/api/raw?path=${encodeURIComponent(path)}`;
 export const fetchThreads = () => request<Thread[]>("/api/threads");
-export const fetchChanges = () => request<ChangesResponse>("/api/changes");
-export const fetchDiff = (path: string) =>
-  request<FileDiff>(`/api/diff?path=${encodeURIComponent(path)}`);
+/** `&base=<branch>` to compare with a branch instead of HEAD. */
+const baseParam = (base: string | null) =>
+  base ? `&base=${encodeURIComponent(base)}` : "";
+export const fetchBranches = () => request<BranchesResponse>("/api/branches");
+export const fetchChanges = (base: string | null) =>
+  request<ChangesResponse>(`/api/changes?${baseParam(base)}`);
+export const fetchDiff = (path: string, base: string | null) =>
+  request<FileDiff>(
+    `/api/diff?path=${encodeURIComponent(path)}${baseParam(base)}`,
+  );
 
 type Author = Pick<Comment, "author" | "clientId">;
 

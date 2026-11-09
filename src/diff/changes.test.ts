@@ -245,6 +245,30 @@ describe("listChanges", () => {
     expect((await changes(root)).files[0]!.version).toBe(first[0]!.version);
   });
 
+  test("compares with where HEAD left a branch: its commits and uncommitted changes, not the branch's own", async () => {
+    const root = repo({ "a.txt": "a\n", "b.txt": "b\n", "c.txt": "c\n" });
+    git(root, "branch", "-q", "-M", "main");
+    git(root, "checkout", "-q", "-b", "feature");
+    writeFiles(root, { "a.txt": "A\n" });
+    git(root, "commit", "-q", "-am", "feature");
+    git(root, "checkout", "-q", "main");
+    writeFiles(root, { "c.txt": "C\n" });
+    git(root, "commit", "-q", "-am", "main moves on");
+    git(root, "checkout", "-q", "feature");
+    writeFiles(root, { "b.txt": "B\n" });
+
+    const main = { name: "main", ref: "refs/heads/main", remote: false };
+    const index = await FileIndex.create(root);
+    const files = (await listChanges(root, index, main)).files;
+    expect(files.map((f) => [f.path, f.status])).toEqual([
+      ["a.txt", "modified"],
+      ["b.txt", "modified"],
+    ]);
+    expect((await listChanges(root, index)).files.map((f) => f.path)).toEqual([
+      "b.txt",
+    ]);
+  });
+
   test("compares a file removed from the index but kept on disk with HEAD", async () => {
     const root = repo({ "same.txt": "s\n", "edited.txt": "a\nb\nc\n" });
     writeFiles(root, { "edited.txt": "a\nB\nc\n" });

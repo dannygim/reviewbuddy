@@ -15,16 +15,46 @@ export function useDocPath(): string | null {
 
 const CHANGES_HASH = "#/changes";
 
-/** Whether the URL hash shows the Changes view (`#/changes`). */
+/**
+ * The branch a Changes view hash compares with (`#/changes?base=<branch>`):
+ * null for HEAD (`#/changes`), undefined for a hash of another view.
+ */
+export function changesBase(hash: string): string | null | undefined {
+  if (hash === CHANGES_HASH) return null;
+  if (!hash.startsWith(`${CHANGES_HASH}?`)) return undefined;
+  const params = new URLSearchParams(hash.slice(CHANGES_HASH.length + 1));
+  return params.get("base") || null;
+}
+
+export function changesHash(base: string | null): string {
+  return base
+    ? `${CHANGES_HASH}?${new URLSearchParams({ base })}`
+    : CHANGES_HASH;
+}
+
+/** Whether the URL hash shows the Changes view. */
 export function useChangesOpen(): boolean {
   return useSyncExternalStore(
     subscribe,
-    () => window.location.hash === CHANGES_HASH,
+    () => changesBase(window.location.hash) !== undefined,
   );
 }
 
-export function openChanges(): void {
-  window.location.hash = CHANGES_HASH;
+/** The branch the Changes view compares with, or null for HEAD. */
+export function useChangesBase(): string | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => changesBase(window.location.hash) ?? null,
+  );
+}
+
+export function openChanges(base: string | null): void {
+  window.location.hash = changesHash(base);
+}
+
+/** Compares with another branch, replacing the current history entry. */
+export function replaceChangesBase(base: string | null): void {
+  window.location.replace(changesHash(base));
 }
 
 /** Leaves the Changes view for a file, or for no file (the root README.md). */
