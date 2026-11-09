@@ -19,8 +19,9 @@
 | `GET /api/tree` | ツリー順に並べたファイルのパスの配列 | — | M1 |
 | `GET /api/file?path=` | ファイルの種類・行の配列・表示用の HTML・mtime | — | M1 |
 | `GET /api/raw?path=` | ファイルの中身そのもの (画像の表示用) | — | M1 |
-| `GET /api/changes` | 未コミットの変更のあるファイルの一覧 (パス、元のパス、状態、行数、`version`)。Git の作業ツリーでなければ `git: false` | — | v0.6 |
-| `GET /api/diff?path=` | 1 ファイルの差分 (変更前・変更後の行の HTML、変更のまとまり、Markdown ならレンダリングした差分)。一覧に無いパスは `404` | — | v0.6 |
+| `GET /api/branches` | Changes 画面で比べられるブランチの短い名前 (`local` / `remote`)。今のブランチと `origin/HEAD` などの symref は除く。Git 管理外なら空 | — | v0.7 |
+| `GET /api/changes` | 未コミットの変更のあるファイルの一覧 (パス、元のパス、状態、行数、`version`)。Git の作業ツリーでなければ `git: false`。`?base=<ブランチ>` でそのブランチとの分岐点からの変更 ([差分表示.md](./差分表示.md#比較の基準))。一覧に無いブランチは `404`、共通の祖先が無ければ `400` | — | v0.6 (`base` は v0.7) |
+| `GET /api/diff?path=` | 1 ファイルの差分 (変更前・変更後の行の HTML、変更のまとまり、Markdown ならレンダリングした差分)。一覧に無いパスは `404`。`&base=` は `GET /api/changes` と同じ | — | v0.6 (`base` は v0.7) |
 | `GET /api/threads` | スレッドの一覧 (コメントを含む)。`?path=` で絞り込める | — | M3 |
 | `POST /api/threads` | スレッドを作る (パス、行範囲、表示 (`source` / `preview`)、本文、Nickname、`client_id`) | ○ | M3 |
 | `POST /api/threads/:id/comments` | リプライを足す | ○ | M3 |
@@ -59,11 +60,11 @@
 | `thread.created` / `thread.updated` / `thread.deleted` | スレッドの作成・コメントの追加 / 編集 / 削除・Resolve / Reopen・再アンカー・送信済みの記録・スレッドの削除 | スレッド (コメントを含む) か、その ID。コメントの変更もスレッド全体で送る (REST の応答と同じ形にして、クライアントの処理を 1 種類にするため) |
 | `file.changed` | 一覧に含まれるファイルの変更 | パス |
 | `tree.changed` | ファイルの追加・削除 | — (クライアントは `GET /api/tree` で取り直す) |
-| `changes.changed` | 監視でまとまった変更のたび (`.git/` の中の変化、つまりコミットを含む) | — (クライアントは `GET /api/changes` で取り直す) |
+| `changes.changed` | 監視でまとまった変更のたび (`.git/` の中の変化、つまりコミットや `git fetch` を含む) | — (クライアントは今の比較の基準の `GET /api/changes` と `GET /api/branches` で取り直す) |
 | `session.ended` | セッションの終了 | — (クライアントは read-only のバナーを出す) |
 
 ### 再接続
 
 - 切れたら指数的に間隔を延ばして (最大 10 秒) 再接続する
-- 再接続したら `hello` を送り直し、`GET /api/threads`・`GET /api/tree`・`GET /api/changes` で取り直して整合させる (切れている間のイベントは再送しない)
+- 再接続したら `hello` を送り直し、`GET /api/threads`・`GET /api/tree`・`GET /api/changes` (今の比較の基準で)・`GET /api/branches` で取り直して整合させる (切れている間のイベントは再送しない)
 - 切れるたびに `GET /api/session` を確かめ、`401` なら (サーバーが再起動して Cookie が無効になった) ログインの画面に戻る

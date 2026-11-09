@@ -6,7 +6,7 @@ Run `reviewbuddy` in a directory and open the URL. Everyone you share it with se
 
 - One command, one binary: no database or account to set up
 - GitHub-like file viewer: syntax highlighting, Markdown preview with Mermaid diagrams
-- Uncommitted changes as a pull-request-style diff, with Markdown rendered and its changes marked
+- Uncommitted changes, or everything changed since you branched off, as a pull-request-style diff, with Markdown rendered and its changes marked
 - Comments on source lines or Markdown blocks, with replies, resolve, and live updates for everyone
 - Prompt export: `path:line` plus the commented lines and the whole thread
 - Read-only toward your files: reviewbuddy writes only to `~/.config/reviewbuddy/`
@@ -51,6 +51,7 @@ Open the URL, enter a nickname and the PIN, and choose a file. Share the URL and
 - **Comments beside the text**: threads sit in a column to the right, level with the lines or blocks they are about. Where several crowd together, click a card or its lines to bring that card level with them. The speech-bubble button in the file's header folds the column down to markers; click a marker to open it again.
 - **Hide the file tree**: the button at the left end of the header. Both choices are kept in your browser.
 - **Review uncommitted changes**: in a Git repository, **Changes** in the header lists every file that differs from `HEAD` (including new untracked files), like a pull request's Files changed: old and new line numbers, changed words highlighted, and Markdown shown rendered with its changes marked. Comment on added or unchanged lines as usual; tick **Viewed** to fold a file you are done with (kept in your browser, and cleared when the file changes again). **Files** goes back.
+  To review a whole branch, pick a branch such as `origin/main` in **Compare with** at the top: the files then show everything changed since the current branch left it, committed or not. The choice is kept in the URL, so a reload or a shared link keeps it.
 
 Starting reviewbuddy again in the same directory resumes the same session. `reviewbuddy --new` starts a fresh one.
 
