@@ -278,7 +278,10 @@ test("compares with the branch chosen in the list, kept in the URL", async () =>
   await view.click('[data-action="files"]');
   await waitFor(view, `location.hash.startsWith("#/doc/")`);
   await view.click('[data-action="changes"]');
-  await waitFor(view, `location.hash === "#/changes?base=main"`);
+  await waitFor(
+    view,
+    `location.hash === "#/changes?base=main" && ${select}?.value === "main"`,
+  );
 
   await choose("");
   await waitFor(view, `${cards} === 3`);
