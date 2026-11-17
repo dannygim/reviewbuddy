@@ -13,7 +13,7 @@
 
 ## 前提
 
-- 調査日: 2026-10-23
+- 調査日: 2026-10-23 (`tailscale serve` が付けるヘッダーは 2026-11-17 に追記)
 - 凡例: **確認済** = 公式ドキュメントで確認したもの / **要検証** = 記載がなく未確認のもの
 - reviewbuddy は既定で `127.0.0.1:4400` で待ち受ける。リモートからの共有の手段はツールの責務外とし、README で `tailscale serve` を案内する ([全体設計.md](../design/全体設計.md))
 
@@ -35,6 +35,12 @@
 
 - `tailscale serve 4400` で、tailnet の DNS 名による HTTPS (証明書は自動発行。tailnet で HTTPS を有効にしておく必要がある) + localhost へのプロキシになる → 安全なコンテキストになり、`127.0.0.1` で待ち受けたまま共有できる **確認済** (Tailscale docs)
 - バックエンドへのリクエストに `Tailscale-User-Login` / `Tailscale-User-Name` / `Tailscale-User-Profile-Pic` を付ける。タグ付きのデバイスからのアクセスと Funnel 経由では付かない。クライアントが同じ名前のヘッダーを送ってきた場合は除去する (偽装対策) **確認済**
+- バックエンドへのリクエストには、接続元を示すヘッダーも付ける (2026-11-17 に追記) **確認済** (ソースコード。手元の 1.104.5 と同じタグ。実際のリクエストでの確認はしていない)
+  - `Host` はクライアントが送ったもの (`<マシン名>.<tailnet>.ts.net` など) をそのまま渡す。書き換えるのは Unix ソケットに転送するときだけ
+  - `X-Forwarded-Host` (クライアントが送った `Host`) は常に付ける。`X-Forwarded-Proto: https` は TLS で受けたときに付ける
+  - `X-Forwarded-For` に接続元の IP を入れる (Funnel 経由でも付く)。`Header.Set` なので、クライアントが送った値は上書きされる
+  - バックエンドから見た接続元は `127.0.0.1` (localhost へのプロキシのため)
+- `tailscale serve --tcp <port>` / `--tls-terminated-tcp <port>` は TCP のまま転送する **確認済** (CLI のヘルプ、1.104.5)。HTTP を解釈しないため、上のヘッダーは付かない (仕組みから判断。実行はしていない) **要検証**
 - `tailscale serve` 経由で WebSocket が通る **確認済** (2026-10-23、Tailscale 1.104.1、macOS。`tailscale serve --https=8443 <port>` の HTTPS 経由で `/api/health` と `/ws` の upgrade が通り、プレゼンスのイベントが届いた)
 - 同じ端末で 443 番をすでに別のサービスに使っていると、`tailscale serve <port>` は `listener already exists for port 443` で失敗する。`--https=<port>` で別の HTTPS ポートに出せる (`https://<マシン名>.<tailnet>.ts.net:<port>/`) **確認済** (実行)
 - `--set-path` でサブパスに出すと、reviewbuddy は `/api` や `/ws`・チャンクを絶対パスで読むため動かない (設計から判断。実行はしていない) **要検証**
@@ -69,6 +75,7 @@
 - **`client_id` は `crypto.getRandomValues()` で作る**
 - **推奨は `tailscale serve`**。HTTPS になり、`127.0.0.1` のまま共有できる。`--port` を明示したときに別のポートへ移らないのは、`tailscale serve 4400` が指す先をずらさないため ([CLI_仕様.md](../design/CLI_仕様.md))
 - **`Tailscale-User-Login` で Nickname を自動入力できる余地がある** (v1 で使うかは未決)
+- **`tailscale serve` を通ったリクエストは、接続元が `127.0.0.1` でも `X-Forwarded-For` / `X-Forwarded-Host` と ts.net の `Host` で見分けられる**。同じマシンのブラウザから直接つないだリクエストには、どれも付かない。ただし TCP のまま転送する仕組み (`--tcp` など) を通すと見分けられない
 - **WebSocket は `tailscale serve` を通る**。443 番が使用中なら `--https=8443` などで別のポートに出す
 - **Tailscale を使っていない相手には、Funnel (公開。PIN が前提) か、マシンの共有 (相手が Tailscale を入れる) を使う**。Funnel は URL に届けば誰でも開けるため、PIN ([ADR-0007](../adr/0007-access-pin.md)) が無い v0.1 では使えない。公開できるポートは 8443 を含むので、`tailscale serve --https=8443` からの切り替えは `tailscale funnel --https=8443` で済む
 
@@ -81,6 +88,10 @@
 > 出典: [MDN — Crypto: randomUUID()](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID) (確認日: 2026-10-23)
 
 > 出典: [Tailscale — Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) (確認日: 2026-10-23)
+
+> 出典: [tailscale/tailscale v1.104.5 — ipn/ipnlocal/serve.go (Host の受け渡し)](https://github.com/tailscale/tailscale/blob/78838476328d1a97dc05400ad23086a9dbe616da/ipn/ipnlocal/serve.go#L1007-L1013) (確認日: 2026-11-17)
+
+> 出典: [tailscale/tailscale v1.104.5 — ipn/ipnlocal/serve.go (`addProxyForwardedHeaders`)](https://github.com/tailscale/tailscale/blob/78838476328d1a97dc05400ad23086a9dbe616da/ipn/ipnlocal/serve.go#L1144-L1152) (確認日: 2026-11-17)
 
 > 出典: [Tailscale — Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (確認日: 2026-10-23)
 

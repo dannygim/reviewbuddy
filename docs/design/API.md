@@ -2,40 +2,43 @@
 
 **目的: SPA とサーバーの間の REST API と WebSocket のイベントの一覧を定める。リクエスト・応答・イベントの型の正本は `src/shared/` の TypeScript の型とし、本書は役割と振る舞いを書く。**
 
-- 対象の要件: F2 / F5 / F10 / F12 / F13 / A1 / A3 / A4 / A5 ([要件.md](./要件.md))
+- 対象の要件: F2 / F5 / F10 / F12 / F13 / A1 / A3 / A4 / A5 / A6 ([要件.md](./要件.md))
 - 共通の約束: パスはルートからの相対パス・POSIX 区切り、行番号は 1 始まり・両端を含む ([全体設計.md](./全体設計.md))
-- 認可: `GET /api/health` と `POST /api/login` 以外は、PIN を入力したブラウザの Cookie が必要 (無ければ `401`)。加えて、書き込み API と WebSocket はトークンが必要 ([セキュリティ.md](./セキュリティ.md))
+- 認可: `GET /api/health` と `POST /api/login` 以外は、PIN を入力したブラウザの Cookie が必要 (無ければ `401`)。加えて、書き込み API と WebSocket はトークンが必要 ([セキュリティ.md](./セキュリティ.md))。一部は Owner のリクエストに限る ([セキュリティ.md](./セキュリティ.md#owner)。下の表の「Owner」の列)
 
 ***
 
 ## REST API
 
-| メソッドとパス | 役割 | 書き込み | フェーズ |
-|---------------|------|---------|---------|
-| `GET /api/health` | 生存確認。アプリ名・バージョン・セッション ID を返す。多重起動の判定に使う。Cookie は要らない (そのため、ルートのパスは返さない) | — | M0 (セッション ID は M3、ルートを外したのは v0.2) |
-| `POST /api/login` | `{ "pin" }` を確かめ、正しければ Cookie を付けて `204` を返す。間違いは `401`、形式違いは `400`、回数の上限で `429` / `403` | — | v0.2 |
-| `GET /api/session` | セッションの情報 (ID、ルート、状態) とトークン | — | M3 |
-| `POST /api/session/end` | セッションを終了する (以後 read-only) | ○ | M6 |
-| `GET /api/tree` | ツリー順に並べたファイルのパスの配列 | — | M1 |
-| `GET /api/file?path=` | ファイルの種類・行の配列・表示用の HTML・mtime | — | M1 |
-| `GET /api/raw?path=` | ファイルの中身そのもの (画像の表示用) | — | M1 |
-| `GET /api/branches` | Changes 画面で比べられるブランチの短い名前 (`local` / `remote`)。今のブランチと `origin/HEAD` などの symref は除く。Git 管理外なら空 | — | v0.7 |
-| `GET /api/changes` | 未コミットの変更のあるファイルの一覧 (パス、元のパス、状態、行数、`version`)。Git の作業ツリーでなければ `git: false`。`?base=<ブランチ>` でそのブランチとの分岐点からの変更 ([差分表示.md](./差分表示.md#比較の基準))。一覧に無いブランチは `404`、共通の祖先が無ければ `400` | — | v0.6 (`base` は v0.7) |
-| `GET /api/diff?path=` | 1 ファイルの差分 (変更前・変更後の行の HTML、変更のまとまり、Markdown ならレンダリングした差分)。一覧に無いパスは `404`。`&base=` は `GET /api/changes` と同じ | — | v0.6 (`base` は v0.7) |
-| `GET /api/threads` | スレッドの一覧 (コメントを含む)。`?path=` で絞り込める | — | M3 |
-| `POST /api/threads` | スレッドを作る (パス、行範囲、表示 (`source` / `preview`)、本文、Nickname、`client_id`) | ○ | M3 |
-| `POST /api/threads/:id/comments` | リプライを足す | ○ | M3 |
-| `PATCH /api/comments/:id` | 自分のコメントを編集する | ○ | M3 |
-| `DELETE /api/comments/:id` | 自分のコメントを消す。元コメント (1 件目) はリプライが無いときだけ消せて、スレッドごと消える | ○ | M3 |
-| `POST /api/threads/:id/resolve` | Resolve する | ○ | M3 |
-| `POST /api/threads/:id/reopen` | Reopen する | ○ | M3 |
-| `POST /api/prompt` | 指定したスレッドのプロンプトを生成する。`exported_at` を記録し、指定があれば Resolve する | ○ | M5 |
+| メソッドとパス | 役割 | 書き込み | Owner | フェーズ |
+|---------------|------|---------|-------|---------|
+| `GET /api/health` | 生存確認。アプリ名・バージョン・セッション ID を返す。多重起動の判定に使う。Cookie は要らない (そのため、ルートのパスは返さない) | — | — | M0 (セッション ID は M3、ルートを外したのは v0.2) |
+| `POST /api/login` | `{ "pin" }` を確かめ、正しければ Cookie を付けて `204` を返す。間違いは `401`、形式違いは `400`、回数の上限で `429` / `403` | — | — | v0.2 |
+| `GET /api/session` | セッションの情報 (ID、ルート、状態)、トークン、このリクエストが Owner か (`owner`) | — | — | M3 (`owner` は v0.8) |
+| `POST /api/session/end` | セッションを終了する (以後 read-only) | ○ | — | M6 |
+| `GET /api/tree` | ツリー順に並べたファイルのパスの配列 | — | — | M1 |
+| `GET /api/tree/ignored` | ignored ファイルと畳んだディレクトリ (末尾が `/`) の配列。`?dir=<ディレクトリ>/` でその直下 ([ファイル一覧と表示.md](./ファイル一覧と表示.md#ignored-ファイル-owner-のみ)) | — | ○ (`403`) | v0.8 |
+| `GET /api/file?path=` | ファイルの種類・行の配列・表示用の HTML・mtime | — | ignored ファイルのみ (`404`) | M1 (ignored は v0.8) |
+| `GET /api/raw?path=` | ファイルの中身そのもの (画像の表示用) | — | ignored ファイルのみ (`404`) | M1 (ignored は v0.8) |
+| `GET /api/branches` | Changes 画面で比べられるブランチの短い名前 (`local` / `remote`)。今のブランチと `origin/HEAD` などの symref は除く。Git 管理外なら空 | — | — | v0.7 |
+| `GET /api/changes` | 未コミットの変更のあるファイルの一覧 (パス、元のパス、状態、行数、`version`)。Git の作業ツリーでなければ `git: false`。`?base=<ブランチ>` でそのブランチとの分岐点からの変更 ([差分表示.md](./差分表示.md#比較の基準))。一覧に無いブランチは `404`、共通の祖先が無ければ `400` | — | — | v0.6 (`base` は v0.7) |
+| `GET /api/diff?path=` | 1 ファイルの差分 (変更前・変更後の行の HTML、変更のまとまり、Markdown ならレンダリングした差分)。一覧に無いパスは `404`。`&base=` は `GET /api/changes` と同じ | — | — | v0.6 (`base` は v0.7) |
+| `GET /api/threads` | スレッドの一覧 (コメントを含む)。`?path=` で絞り込める | — | — | M3 |
+| `POST /api/threads` | スレッドを作る (パス、行範囲、表示 (`source` / `preview`)、本文、Nickname、`client_id`) | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `POST /api/threads/:id/comments` | リプライを足す | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `PATCH /api/comments/:id` | 自分のコメントを編集する | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `DELETE /api/comments/:id` | 自分のコメントを消す。元コメント (1 件目) はリプライが無いときだけ消せて、スレッドごと消える | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `POST /api/threads/:id/resolve` | Resolve する | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `POST /api/threads/:id/reopen` | Reopen する | ○ | ignored ファイルのスレッドのみ (`403`) | M3 |
+| `POST /api/prompt` | 指定したスレッドのプロンプトを生成する。`exported_at` を記録し、指定があれば Resolve する | ○ | ○ (`403`) | M5 (Owner に限るのは v0.8) |
 
 - 書き込みは `Content-Type: application/json` と `X-Reviewbuddy-Token` が必須
 - 終了したセッション (read-only) では、書き込みはすべて `409` を返す
 - 自分のもの以外のコメントの編集・削除は `403` を返す (`client_id` で判定する信頼ベースの簡易な制御)
 - エラーの応答は `{ "error": "<人が読める英語のメッセージ>" }`
 - Cookie が無いときの `401` は `{ "error": "Enter the PIN shown where reviewbuddy was started." }`
+- Owner に限る API への参加者のリクエストは、`GET /api/tree/ignored` が `403` (`Only the owner can see ignored files.`)、スレッドの書き込みが `403` (`Only the owner can change threads on ignored files.`)、`POST /api/prompt` が `403` (`Only the owner can copy prompts.`)。ignored ファイルの `GET /api/file` / `GET /api/raw` は、一覧に無いファイルと同じ `404` を返す
+- スレッド (`GET /api/threads` の要素と `thread.*` のイベント) には、ignored ファイルのスレッドかを示す `ignored` を付ける。DB には保存せず、送るたびに判定する。画面は参加者に返信などのボタンを出さないためにだけ使い、権限はサーバーで確かめる
 
 ***
 
@@ -43,6 +46,7 @@
 
 - エンドポイント: `GET /ws?token=<token>` で upgrade する (Cookie も必要)
 - 全員への配信には、Bun の `ws.subscribe("review")` と `server.publish("review", ...)` を使う
+- Owner の接続 (upgrade のリクエストで判定) は `owner` のトピックも購読する。Owner にだけ配るイベントは `server.publish("owner", ...)` で送る
 - メッセージは JSON で、`type` フィールドで種類を分ける
 
 ### クライアント → サーバー
@@ -58,7 +62,7 @@
 |--------|------|------|
 | `presence.changed` | 接続・切断・`view` の変更 | 参加者 (Nickname、`client_id`、開いているファイル) の一覧 |
 | `thread.created` / `thread.updated` / `thread.deleted` | スレッドの作成・コメントの追加 / 編集 / 削除・Resolve / Reopen・再アンカー・送信済みの記録・スレッドの削除 | スレッド (コメントを含む) か、その ID。コメントの変更もスレッド全体で送る (REST の応答と同じ形にして、クライアントの処理を 1 種類にするため) |
-| `file.changed` | 一覧に含まれるファイルの変更 | パス |
+| `file.changed` | 一覧に含まれるファイルの変更 (全員へ)、ignored ファイルの変更 (Owner にだけ) | パス |
 | `tree.changed` | ファイルの追加・削除 | — (クライアントは `GET /api/tree` で取り直す) |
 | `changes.changed` | 監視でまとまった変更のたび (`.git/` の中の変化、つまりコミットや `git fetch` を含む) | — (クライアントは今の比較の基準の `GET /api/changes` と `GET /api/branches` で取り直す) |
 | `session.ended` | セッションの終了 | — (クライアントは read-only のバナーを出す) |
