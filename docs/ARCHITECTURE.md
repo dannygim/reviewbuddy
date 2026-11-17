@@ -21,6 +21,7 @@ reviewbuddy は Bun の単一バイナリで動く CLI である。起動する�
 | 配布 | GitHub Releases + mise の `github:` バックエンド | [ADR-0005](./adr/0005-distribution-mise-github.md) | [配布.md](./design/配布.md) |
 | 名前 | reviewbuddy (v0.2.0 までは akapen)。コマンド・`~/.config/reviewbuddy/`・`REVIEWBUDDY_*`・mise の `github:dannygim/reviewbuddy` に使う | [ADR-0008](./adr/0008-rename-to-reviewbuddy.md) | [名前_調査.md](./research/名前_調査.md) |
 | セキュリティ | 起動ごとの 6 桁の PIN と Cookie で閲覧を制限。加えて `Host` の許可リスト + 書き込みと WebSocket のトークン + WebSocket の `Origin` 検証 | [ADR-0007](./adr/0007-access-pin.md) (ADR-0006 を置き換え) | [セキュリティ.md](./design/セキュリティ.md) |
+| Owner | 接続元が loopback・`Host` が同じマシン・転送のヘッダーなしのリクエストを Owner (起動した本人) とし、ignored ファイルの閲覧とそのスレッドへの書き込み、`Copy prompt` を Owner に限る | [ADR-0009](./adr/0009-owner-by-connection.md) | [セキュリティ.md](./design/セキュリティ.md#owner) / [ファイル一覧と表示.md](./design/ファイル一覧と表示.md#ignored-ファイル-owner-のみ) |
 
 ***
 

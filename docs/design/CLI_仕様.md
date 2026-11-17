@@ -65,6 +65,7 @@ reviewbuddy 0.3.0 is reviewing /Users/me/work/project
 ```
 
 - PIN は起動のたびに変わる。参加者は最初の画面で入力する ([セキュリティ.md](./セキュリティ.md))
+- 起動した本人は、表示された URL (`127.0.0.1` など) を同じマシンのブラウザで開くと Owner になる。`tailscale serve` の ts.net の URL で開くと参加者として扱われる ([セキュリティ.md](./セキュリティ.md#owner))
 - PIN の失敗が通算 20 回になると、標準エラーに `reviewbuddy: too many wrong PINs; restart reviewbuddy to get a new PIN.` を出す (以後のログインはすべて拒否する)
 
 - 多重起動を検知したとき (同じルートのサーバーが動いている) は、既存の URL を出して終了コード 0 で終わる ([保存先とセッション.md](./保存先とセッション.md))

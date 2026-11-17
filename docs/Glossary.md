@@ -10,9 +10,11 @@
 | プロンプト | 選んだスレッドを Coding Agent に渡すために決まった形式で整形したテキスト | UI からのコピーと `reviewbuddy export` で出力する |
 | Coding Agent | Claude Code など、指示を受けてコードやドキュメントを修正する AI Agent | |
 | Nickname | 参加者が初回アクセス時に入力する表示名 | 自己申告で、本人の確認はしない |
+| Owner | reviewbuddy を起動した本人。起動したマシンのブラウザから直接 (`127.0.0.1` などで、プロキシを通さずに) つないだリクエストを Owner のものとする | ignored ファイルの閲覧とそのスレッドへの書き込み、プロンプトのコピーは Owner だけができる。PIN は Owner も入力する。[ADR-0009](./adr/0009-owner-by-connection.md) |
 | PIN | reviewbuddy を起動するたびにターミナルに表示される 6 桁の数字。参加者は最初の画面で Nickname と一緒に入力する | 起動ごとに変わる。[ADR-0007](./adr/0007-access-pin.md) |
 | Preview 表示 / Source 表示 | Markdown をレンダリングした表示 / 元のテキストを行番号付きで出す表示 | どちらで作ったスレッドも同じ行範囲で保存される |
 | FileIndex | ルートの中で File Tree に出すファイルの一覧。`git ls-files` (Git 管理外は `.gitignore` の判定) から作る | [ファイル一覧と表示.md](./design/ファイル一覧と表示.md) |
+| ignored ファイル | `.gitignore`・`.git/info/exclude`・`core.excludesFile` で除外され、FileIndex に入らないファイル | Owner だけが File Tree に出せる (既定は出さない)。参加者には返さない。[ファイル一覧と表示.md](./design/ファイル一覧と表示.md#ignored-ファイル-owner-のみ) |
 | ツリー順 | 同じ階層ではディレクトリを先にし、名前で並べる順序。File Tree とプロンプトの並び順に使う | 大文字・小文字を区別せずに比べ、同じなら区別して比べる |
 | 再アンカー | ファイルが変わったときに、スレッドのアンカーの内容を探し直して行範囲を更新すること | 見つからなければ Outdated |
 | Review パネル | 全ファイルのスレッドの一覧から対象を選び、プロンプトを生成・コピーする画面 | |

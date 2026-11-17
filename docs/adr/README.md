@@ -61,3 +61,4 @@ proposed → accepted → superseded
 | [0006](./0006-security-without-auth.md) | 認証なしのまま、Host の許可リストとトークンでブラウザ経由の攻撃を防ぐ | superseded (0007) |
 | [0007](./0007-access-pin.md) | 起動時に表示する 6 桁の PIN で閲覧を制限する | accepted |
 | [0008](./0008-rename-to-reviewbuddy.md) | アプリ名を akapen から reviewbuddy に変える | accepted |
+| [0009](./0009-owner-by-connection.md) | 起動したマシンから直接つないだブラウザを Owner とする | accepted |

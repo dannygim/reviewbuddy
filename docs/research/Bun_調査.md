@@ -8,7 +8,7 @@
 
 - 調査日: 2026-10-23
 - 凡例: **確認済** = 公式ドキュメント (一次ソース) か、手元で実行して確認したもの / **要検証** = 二次ソースや推測。実装時に確認する
-- 検証環境: Linux コンテナ上の Bun 1.4.4 (初回の調査)、macOS (Apple silicon) 上の Bun 1.4.4 (M0 の実装時)
+- 検証環境: Linux コンテナ上の Bun 1.4.4 (初回の調査)、macOS (Apple silicon) 上の Bun 1.4.4 (M0 の実装時、2026-11-17 の `server.requestIP` の確認)
 
 ***
 
@@ -50,6 +50,10 @@
 - 使用中のポートで `Bun.serve` を呼ぶと、`code: "EADDRINUSE"` のエラーを同期的に投げる (メッセージは `Failed to start server. Is port <port> in use?`) **確認済** (実行)
 - WebSocket: `server.upgrade(req, { data })` → `websocket: { open, message, close, ... }`。`ws.subscribe(topic)` と `server.publish(topic, msg)` で全員へ配信する (`ws.publish` は送信者以外へ)。`ws.data` の型は `websocket.data` フィールドで指定する (`Bun.serve<T>()` のジェネリクスは廃止) **確認済**
 - ドキュメントは、upgrade の前に `Origin` ヘッダーを検証するよう推奨している (Cross-Site WebSocket Hijacking 対策) **確認済**
+- 接続元: `server.requestIP(req)` が `{ address, family, port }` (`SocketAddress | null`) を返す (`bun-types` の `serve.d.ts`) **確認済**。待ち受けのアドレスごとの値は次のとおり **確認済** (2026-11-17、Bun 1.4.4、macOS で実行)
+  - `127.0.0.1` / `0.0.0.0` で待ち受け、`127.0.0.1` や `localhost` からつなぐ → `127.0.0.1` (`IPv4`)。`[::1]` にはつながらない
+  - `::` で待ち受け → `127.0.0.1` からは `::ffff:127.0.0.1`、`[::1]` と `localhost` からは `::1` (どちらも `IPv6`)
+  - `0.0.0.0` で待ち受けたときの `server.url` は `http://0.0.0.0:<port>/` で、それを開くと `Host` は `0.0.0.0:<port>`、接続元は `127.0.0.1` になる
 - ファイル監視: `node:fs` の `fs.watch(dir, { recursive: true })` を使う想定。macOS / Linux の両方で recursive が期待どおり動くか、大量ファイル時の負荷 **要検証**
 
 ### bun build --compile
