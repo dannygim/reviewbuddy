@@ -19,6 +19,14 @@ export class Hub {
   private readonly sockets = new Set<Socket>();
   private server: Bun.Server<SocketData> | null = null;
 
+  /**
+   * @param isHidden paths never shown in presence (ignored files, which only
+   *   the owner can open).
+   */
+  constructor(
+    private readonly isHidden: (path: string) => boolean = () => false,
+  ) {}
+
   attach(server: Bun.Server<SocketData>): void {
     this.server = server;
   }
@@ -65,11 +73,17 @@ export class Hub {
         result.push({
           clientId: data.clientId,
           nickname: data.nickname,
-          path: data.path,
+          path: data.path && this.isHidden(data.path) ? null : data.path,
         });
       }
     }
     return result;
+  }
+
+  /** Whether any browser has the file open. */
+  isViewing(path: string): boolean {
+    for (const { data } of this.sockets) if (data.path === path) return true;
+    return false;
   }
 
   private publishPresence(): void {

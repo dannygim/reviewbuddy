@@ -62,6 +62,7 @@ test("asks for a tree refresh for paths it does not list", async () => {
   const change = await next();
   expect(change.tree).toBe(true);
   expect(change.files).toEqual([]);
+  expect(change.others).toContain("new/deep/c.md");
 });
 
 test("reports a deleted listed file", async () => {

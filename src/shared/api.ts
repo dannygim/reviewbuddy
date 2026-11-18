@@ -141,4 +141,9 @@ export type Thread = {
   exportedAt: string | null;
   /** The first comment starts the thread; the rest are replies. */
   comments: Comment[];
+  /**
+   * On an ignored file, so only the owner can change it. Set by the server
+   * on every thread it sends; not stored.
+   */
+  ignored?: boolean;
 };

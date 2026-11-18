@@ -103,6 +103,15 @@ export class ReviewStore {
     return this.toThread(row, comments.map(toComment));
   }
 
+  /** The thread a comment belongs to. */
+  getCommentThread(commentId: string): Thread {
+    const row = this.db
+      .query("SELECT thread_id FROM comments WHERE id = $id")
+      .get({ id: commentId }) as { thread_id: string } | null;
+    if (!row) throw new ReviewError(404, "Comment not found");
+    return this.getThread(row.thread_id);
+  }
+
   createThread(input: ThreadInput): Thread {
     const id = ulid();
     const now = this.timestamp();
