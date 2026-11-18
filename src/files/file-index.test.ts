@@ -3,7 +3,10 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   rmSync,
+  statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -137,5 +140,173 @@ describe("listFiles robustness", () => {
     expect(await listFiles(join(tmpdir(), "reviewbuddy-missing-root"))).toEqual(
       [],
     );
+  });
+});
+
+/** The cases of docs/research/gitignore_判定_調査.md, in a real-path root. */
+function ignoredRepo(): string {
+  const root = realpathSync(
+    fixture({
+      ".gitignore": "dist/\nnode_modules/\nbuild/\nbuild2/\n*.log\n.env\n",
+      "dist/out.js": "",
+      "node_modules/pkg/index.js": "",
+      "build/keep.txt": "",
+      "build/other.txt": "",
+      "app.log": "",
+      "tracked.log": "",
+      ".env": "SECRET=1\n",
+      "sub/.gitignore": "secret.txt\n",
+      "sub/secret.txt": "",
+      "localonly.txt": "",
+      "README.md": "",
+    }),
+  );
+  mkdirSync(join(root, "build2"));
+  git(root, "init", "-q");
+  writeFileSync(join(root, ".git/info/exclude"), "localonly.txt\n");
+  git(root, "add", ".");
+  git(root, "add", "-f", "build/keep.txt", "tracked.log");
+  return root;
+}
+
+describe("FileIndex.listIgnored", () => {
+  test("lists Git's ignored files, folding ignored directories", async () => {
+    const root = ignoredRepo();
+    const indexFile = join(root, ".git/index");
+    const before = statSync(indexFile).mtimeMs;
+    const index = await FileIndex.create(root);
+
+    expect(await index.listIgnored()).toEqual([
+      "build/other.txt",
+      "dist/",
+      "node_modules/",
+      "sub/secret.txt",
+      ".env",
+      "app.log",
+      "localonly.txt",
+    ]);
+    expect(statSync(indexFile).mtimeMs).toBe(before);
+  });
+
+  test("leaves out viewer.exclude", async () => {
+    const root = ignoredRepo();
+    const index = await FileIndex.create(root, { exclude: ["dist", "*.log"] });
+    expect(await index.listIgnored()).toEqual([
+      "build/other.txt",
+      "node_modules/",
+      "sub/secret.txt",
+      ".env",
+      "localonly.txt",
+    ]);
+  });
+
+  test("stacks nested .gitignore files outside Git", async () => {
+    const root = fixture({
+      ".gitignore": "*.log\nbuild/\n",
+      "a.md": "",
+      "x.log": "",
+      "build/o.js": "",
+      "pkg/.gitignore": "secret.txt\n!keep.log\n",
+      "pkg/secret.txt": "",
+      "pkg/keep.log": "",
+      "pkg/inner/secret.txt": "",
+      ".git/config": "not a repository",
+    });
+    expect(await (await FileIndex.create(root)).listIgnored()).toEqual([
+      "build/",
+      "pkg/inner/secret.txt",
+      "pkg/secret.txt",
+      "x.log",
+    ]);
+    const index = await FileIndex.create(root, { exclude: ["build"] });
+    expect(await index.listIgnored()).toEqual([
+      "pkg/inner/secret.txt",
+      "pkg/secret.txt",
+      "x.log",
+    ]);
+  });
+});
+
+describe("FileIndex.listIgnoredDir", () => {
+  const root = ignoredRepo();
+  symlinkSync(join(root, "dist"), join(root, "node_modules/link"));
+  symlinkSync("../README.md", join(root, "node_modules/readme"));
+  const index = FileIndex.create(root);
+
+  test("lists one level, symlinks as files", async () => {
+    expect((await index).listIgnoredDir("node_modules/")).toEqual([
+      "node_modules/pkg/",
+      "node_modules/link",
+      "node_modules/readme",
+    ]);
+    expect((await index).listIgnoredDir("node_modules/pkg/")).toEqual([
+      "node_modules/pkg/index.js",
+    ]);
+  });
+
+  test("leaves out viewer.exclude", async () => {
+    const excluding = await FileIndex.create(root, { exclude: ["*.js"] });
+    expect(excluding.listIgnoredDir("node_modules/pkg/")).toEqual([]);
+    expect(excluding.listIgnoredDir(".git/")).toBeNull();
+  });
+
+  test.each([
+    ["node_modules"],
+    ["sub/"],
+    ["build/"],
+    [""],
+    ["/"],
+    ["../"],
+    ["node_modules/../"],
+    ["./node_modules/"],
+    ["node_modules//"],
+    ["missing/"],
+    ["README.md/"],
+    ["node_modules/link/"],
+    [".git/"],
+  ])("rejects %p", async (dir) => {
+    expect((await index).listIgnoredDir(dir)).toBeNull();
+  });
+});
+
+describe("FileIndex.isIgnoredFile", () => {
+  const root = ignoredRepo();
+  const outside = join(fixture({ "secret.txt": "" }), "secret.txt");
+  symlinkSync(join(root, "dist"), join(root, "node_modules/link"));
+  symlinkSync("../README.md", join(root, "node_modules/readme"));
+  symlinkSync(outside, join(root, "dist/secret.txt"));
+  const index = FileIndex.create(root);
+
+  test.each([
+    [".env"],
+    ["dist/out.js"],
+    ["node_modules/pkg/index.js"],
+    ["build/other.txt"],
+    ["node_modules/readme"],
+  ])("accepts %p", async (path) => {
+    expect((await index).isIgnoredFile(path)).toBe(true);
+  });
+
+  test.each([
+    ["README.md"],
+    ["missing.md"],
+    ["dist"],
+    ["dist/"],
+    [""],
+    ["../x"],
+    ["./.env"],
+    ["dist/../.env"],
+    ["dist//out.js"],
+    [".git/config"],
+    ["node_modules/link"],
+    ["node_modules/link/out.js"],
+    ["dist/secret.txt"],
+  ])("rejects %p", async (path) => {
+    expect((await index).isIgnoredFile(path)).toBe(false);
+  });
+
+  test("rejects viewer.exclude", async () => {
+    const excluding = await FileIndex.create(root, { exclude: [".env"] });
+    expect(excluding.isIgnoredFile(".env")).toBe(false);
   });
 });
