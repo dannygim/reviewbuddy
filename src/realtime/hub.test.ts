@@ -6,6 +6,7 @@ import { TEST_TOKEN, testSession } from "../../test/support";
 import { FileIndex } from "../files/file-index";
 import { type AppServer, startServer } from "../server";
 import type { ClientMessage, ServerEvent } from "../shared/events";
+import { Hub, type SocketData } from "./hub";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "reviewbuddy-hub-")));
 writeFileSync(join(root, "a.md"), "one\ntwo\n");
@@ -155,5 +156,50 @@ describe("WebSocket hub", () => {
     expect(await attempt(wsUrl(), { Origin: "https://mac.tail1.ts.net" })).toBe(
       "opened",
     );
+  });
+});
+
+describe("Hub.publishToOwner", () => {
+  test("reaches the owner's sockets only", async () => {
+    const hub = new Hub();
+    const bare = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(req, server) {
+        const owner = new URL(req.url).searchParams.has("owner");
+        const data: SocketData = {
+          clientId: null,
+          nickname: null,
+          path: null,
+          owner,
+        };
+        return server.upgrade(req, { data })
+          ? undefined
+          : new Response(null, { status: 400 });
+      },
+      websocket: hub.handlers,
+    });
+    hub.attach(bare);
+    const open = (query: string) =>
+      new Promise<ServerEvent[]>((resolve, reject) => {
+        const ws = new WebSocket(`ws://127.0.0.1:${bare.port}/${query}`);
+        const events: ServerEvent[] = [];
+        ws.onmessage = (message) =>
+          events.push(JSON.parse(String(message.data)) as ServerEvent);
+        ws.onopen = () => resolve(events);
+        ws.onerror = () => reject(new Error("rejected"));
+      });
+    const owner = await open("?owner");
+    const participant = await open("");
+
+    hub.publishToOwner({ type: "file.changed", path: ".env" });
+    hub.publish({ type: "file.changed", path: "a.md" });
+    await Bun.sleep(100);
+    expect(owner).toEqual([
+      { type: "file.changed", path: ".env" },
+      { type: "file.changed", path: "a.md" },
+    ]);
+    expect(participant).toEqual([{ type: "file.changed", path: "a.md" }]);
+    await bare.stop(true);
   });
 });

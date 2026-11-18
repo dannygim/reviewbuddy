@@ -4,11 +4,14 @@ export type SocketData = {
   clientId: string | null;
   nickname: string | null;
   path: string | null;
+  /** Decided on the upgrade request (docs/adr/0009-owner-by-connection.md). */
+  owner: boolean;
 };
 
 type Socket = Bun.ServerWebSocket<SocketData>;
 
 const TOPIC = "review";
+const OWNER_TOPIC = "owner";
 const MAX_FIELD = 4096;
 
 /** Tracks connected browsers and broadcasts events to all of them. */
@@ -25,11 +28,17 @@ export class Hub {
     this.server?.publish(TOPIC, JSON.stringify(event), false);
   }
 
+  /** Sends to the owner's browsers only. */
+  publishToOwner(event: ServerEvent): void {
+    this.server?.publish(OWNER_TOPIC, JSON.stringify(event), false);
+  }
+
   readonly handlers = {
     data: {} as SocketData,
     open: (ws: Socket) => {
       this.sockets.add(ws);
       ws.subscribe(TOPIC);
+      if (ws.data.owner) ws.subscribe(OWNER_TOPIC);
     },
     message: (ws: Socket, raw: string | Buffer) => {
       const message = parse(String(raw));

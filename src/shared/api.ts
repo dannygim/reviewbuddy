@@ -17,6 +17,11 @@ export type SessionInfo = {
   resolveOnCopy: boolean;
   /** Prompt settings, for formatting in the browser when read-only. */
   prompt: { preamble: string; maxAnchorLines: number };
+  /**
+   * Whether this request came from the owner (docs/adr/0009-owner-by-connection.md).
+   * Only for showing controls; the server checks every request itself.
+   */
+  owner: boolean;
 };
 
 export type TreeResponse = { files: string[] };

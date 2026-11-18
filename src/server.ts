@@ -16,7 +16,7 @@ import { type Body, InputError } from "./review/input";
 import { reviewRoutes } from "./review/routes";
 import { ReviewError, type ReviewStore } from "./review/store";
 import { displayRoot } from "./root";
-import { isAllowedHost, isAllowedOrigin } from "./security";
+import { isAllowedHost, isAllowedOrigin, isOwnerRequest } from "./security";
 import type { SessionMeta } from "./session/session";
 import type {
   BranchesResponse,
@@ -62,6 +62,11 @@ export type ServerOptions = {
   watch?: boolean;
   /** Requires the PIN before anything else; without it anyone can use the server (tests). */
   access?: AccessGate;
+  /**
+   * Whether a request comes from the owner. Defaults to isOwnerRequest on the
+   * connection; tests replace it to act as participants.
+   */
+  isOwner?: (req: Request) => boolean;
 };
 
 export type AppServer = Bun.Server<SocketData>;
@@ -157,7 +162,13 @@ function listen(options: ServerOptions, port: number): AppServer {
       }
     });
 
-  const sessionInfo = (): SessionInfo => ({
+  // The owner (docs/adr/0009-owner-by-connection.md), decided per request.
+  const isOwner =
+    options.isOwner ??
+    ((req: Request) =>
+      isOwnerRequest(server.requestIP(req)?.address, req.headers));
+
+  const sessionInfo = (req: Request): SessionInfo => ({
     id: session.meta.id,
     root,
     rootDisplay: displayRoot(root),
@@ -166,6 +177,7 @@ function listen(options: ServerOptions, port: number): AppServer {
     token: session.token,
     resolveOnCopy: options.resolveOnCopy ?? false,
     prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
+    owner: isOwner(req),
   });
 
   const markEnded = () => {
@@ -268,12 +280,12 @@ function listen(options: ServerOptions, port: number): AppServer {
           });
         }),
       },
-      "/api/session": guard(() => Response.json(sessionInfo())),
+      "/api/session": guard((req) => Response.json(sessionInfo(req))),
       "/api/session/end": {
-        POST: write(() => {
+        POST: write((req) => {
           session.end();
           markEnded();
-          return Response.json(sessionInfo());
+          return Response.json(sessionInfo(req));
         }),
       },
       "/api/tree": guard(() =>
@@ -358,7 +370,12 @@ function listen(options: ServerOptions, port: number): AppServer {
       ) {
         return errorResponse(403, "Origin not allowed");
       }
-      const data: SocketData = { clientId: null, nickname: null, path: null };
+      const data: SocketData = {
+        clientId: null,
+        nickname: null,
+        path: null,
+        owner: isOwner(req),
+      };
       if (server.upgrade(req, { data })) {
         session.touch();
         return undefined;
