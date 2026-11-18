@@ -13,7 +13,7 @@ import { Hub, type SocketData } from "./realtime/hub";
 import { isImagePath, renderFile } from "./render/file-view";
 import { splitLines } from "./render/highlight";
 import { type Body, InputError } from "./review/input";
-import { reviewRoutes } from "./review/routes";
+import { reviewRoutes, withIgnored } from "./review/routes";
 import { ReviewError, type ReviewStore } from "./review/store";
 import { displayRoot } from "./root";
 import { isAllowedHost, isAllowedOrigin, isOwnerRequest } from "./security";
@@ -98,7 +98,7 @@ export function startServer(options: ServerOptions): AppServer {
 
 function listen(options: ServerOptions, port: number): AppServer {
   const { root, index: files, session, access } = options;
-  const hub = new Hub();
+  const hub = new Hub((path) => files.isIgnoredFile(path));
   // Open without the PIN (to find a running server), so no root path.
   const health: Health = {
     name: "reviewbuddy",
@@ -187,8 +187,9 @@ function listen(options: ServerOptions, port: number): AppServer {
   };
 
   // Keep threads on their lines when files change (docs/design/データモデル.md).
+  // Ignored files are read too, or their threads would look deleted.
   const reanchorPath = (path: string) => {
-    const abs = resolveFile(root, files, path);
+    const abs = resolveFile(root, files, path, { ignored: true });
     let lines: string[] | null = null;
     try {
       if (abs) lines = splitLines(readFileSync(abs, "utf8"));
@@ -196,7 +197,10 @@ function listen(options: ServerOptions, port: number): AppServer {
       // deleted between the event and now: the threads become outdated
     }
     for (const thread of session.store.reanchorFile(path, lines)) {
-      hub.publish({ type: "thread.updated", thread });
+      hub.publish({
+        type: "thread.updated",
+        thread: withIgnored(files, thread),
+      });
     }
   };
 
@@ -250,6 +254,20 @@ function listen(options: ServerOptions, port: number): AppServer {
     for (const path of change.files) {
       hub.publish({ type: "file.changed", path });
       if (!session.readOnly) reanchorPath(path);
+    }
+    // Unlisted paths can be many (bun install): only files with threads or
+    // open in a browser matter. An ignored file's changes go to the owner only.
+    const threaded = new Set(
+      change.others.length > 0
+        ? session.store.listThreads().map((t) => t.path)
+        : [],
+    );
+    for (const path of change.others) {
+      if (!threaded.has(path) && !hub.isViewing(path)) continue;
+      if (files.isIgnoredFile(path)) {
+        hub.publishToOwner({ type: "file.changed", path });
+      }
+      if (!session.readOnly && threaded.has(path)) reanchorPath(path);
     }
   };
 
@@ -365,6 +383,7 @@ function listen(options: ServerOptions, port: number): AppServer {
         write,
         publish: (event) => hub.publish(event),
         prompt: options.prompt ?? DEFAULT_PROMPT_OPTIONS,
+        isOwner,
       }),
     },
     fetch(req, server) {
@@ -430,7 +449,7 @@ function listen(options: ServerOptions, port: number): AppServer {
     // only Git's directories outside the root.
     gitDirsOutside(root)
       .then((dirs) =>
-        watchGitDirs(dirs, () => report({ files: [], tree: true })),
+        watchGitDirs(dirs, () => report({ files: [], tree: true, others: [] })),
       )
       .catch((error) => {
         console.error("reviewbuddy: watching Git failed:", error);

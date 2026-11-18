@@ -6,6 +6,8 @@ export type Change = {
   files: string[];
   /** Something unlisted changed (a new file, .git/, ...): re-list the files. */
   tree: boolean;
+  /** The unlisted paths that changed, ignored files among them. */
+  others: string[];
 };
 
 /**
@@ -19,21 +21,27 @@ export function watchRoot(
   debounceMs = 200,
 ): () => void {
   const files = new Set<string>();
+  const others = new Set<string>();
   let tree = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const flush = () => {
     timer = undefined;
-    const change = { files: [...files], tree };
+    const change = { files: [...files], tree, others: [...others] };
     files.clear();
+    others.clear();
     tree = false;
     onChange(change);
   };
 
   const watcher = watch(root, { recursive: true }, (_event, name) => {
     const path = name ? String(name).split(sep).join("/") : null;
-    if (path && isListed(path)) files.add(path);
-    else tree = true;
+    if (path && isListed(path)) {
+      files.add(path);
+    } else {
+      tree = true;
+      if (path) others.add(path);
+    }
     timer ??= setTimeout(flush, debounceMs);
   });
   // Never keep the process alive just for watching.
