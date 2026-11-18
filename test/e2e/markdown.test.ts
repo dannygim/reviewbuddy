@@ -107,8 +107,12 @@ test("switches to the source view", async () => {
 
 test("follows relative links to other files", async () => {
   await using view = await open("doc/guide.md");
-  // The diagram above the link shifts the layout when it renders.
-  await waitFor(view, `!!document.querySelector(".mermaid svg .node")`);
+  // The diagram above the link shifts the layout when it renders: Mermaid
+  // inserts it at a default height, then sets its viewBox and shrinks it.
+  await waitFor(
+    view,
+    `!!document.querySelector(".mermaid svg[viewBox] .node")`,
+  );
   await view.click('a[href="#/doc/doc/other.md"]');
   await waitFor(
     view,
