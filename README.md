@@ -42,9 +42,12 @@ reviewbuddy            # or: reviewbuddy path/to/dir
 
 Open the URL, enter a nickname and the PIN, and choose a file. Share the URL and the PIN with the people you review with — for example, say the PIN in the call instead of posting it next to the URL. The PIN changes every time reviewbuddy starts, so everyone enters it again after a restart.
 
+Opening the printed URL (`http://127.0.0.1:4400/`) on the machine that runs reviewbuddy makes you the **owner**: only the owner can copy prompts and see ignored files. Everyone who comes through `tailscale serve` or from another machine is a participant — including you, if you open the `ts.net` URL yourself.
+
 - **Comment on code**: click a line number, Shift+click or drag to select a range, then write a comment.
 - **Comment on Markdown**: in the Preview tab, hover a block and click **+** (Shift+click another block to extend).
-- **Copy a prompt**: open **Review**, choose threads (all open ones by default), and click **Copy prompt**. Copied threads are marked **Sent**; tick **Resolve copied threads** to resolve them as well.
+- **Copy a prompt** (owner only): open **Review**, choose threads (all open ones by default), and click **Copy prompt**. Copied threads are marked **Sent**; tick **Resolve copied threads** to resolve them as well. Participants see the threads in **Review** but cannot copy them.
+- **Ignored files** (owner only): the eye button next to the file tree button shows the files `.gitignore` leaves out (local notes, build output, `.env`, ...) in the file tree, in gray. Folded directories such as `node_modules/` load as you open them. You can open them and comment on them; participants see those threads but cannot open the files or change the threads. The choice is kept in your browser.
 - **End the session**: **End** makes the session read-only for everyone.
 - **Display mode**: the icon at the right end of the header switches between Light, Dark and System (follows your OS). The choice is kept in your browser.
 - **Directory READMEs**: opening the URL without a file shows the README.md at the root, and expanding a directory in the file tree opens the README.md directly inside it.
@@ -135,7 +138,9 @@ ended_days = 14          # 0 = never delete ended sessions
 
 ## Security
 
-reviewbuddy has no accounts. Each start prints a new 6-digit PIN, and only browsers that entered it can see files and comments (an HttpOnly cookie, forgotten on restart). Wrong PINs are limited to 5 a minute; after 20, reviewbuddy refuses every login until you restart it for a new PIN. Over plain HTTP (`--host 0.0.0.0`) the PIN and the cookie travel unencrypted, so prefer `tailscale serve`. Everyone with the PIN can read and comment, and nicknames are not verified. reviewbuddy also refuses requests whose `Host` header is not an IP address, `localhost`, a `*.ts.net` name or a configured name (against DNS rebinding), requires a per-server token for writes and WebSockets (against CSRF and cross-site WebSocket hijacking), only serves files in the file list (nothing ignored by `.gitignore`, nothing outside the directory), and never loads the reviewed directory's `.env`. See [docs/design/セキュリティ.md](docs/design/セキュリティ.md).
+reviewbuddy has no accounts. Each start prints a new 6-digit PIN, and only browsers that entered it can see files and comments (an HttpOnly cookie, forgotten on restart). Wrong PINs are limited to 5 a minute; after 20, reviewbuddy refuses every login until you restart it for a new PIN. Over plain HTTP (`--host 0.0.0.0`) the PIN and the cookie travel unencrypted, so prefer `tailscale serve`. Everyone with the PIN can read and comment, and nicknames are not verified. reviewbuddy also refuses requests whose `Host` header is not an IP address, `localhost`, a `*.ts.net` name or a configured name (against DNS rebinding), requires a per-server token for writes and WebSockets (against CSRF and cross-site WebSocket hijacking), only serves files in the file list (nothing outside the directory, and files ignored by `.gitignore` only to the owner), and never loads the reviewed directory's `.env`.
+
+The owner is a browser on this machine connecting directly: from a loopback address, to a `Host` naming this machine (`127.0.0.1`, `localhost`, `[::1]`, `0.0.0.0`), without `X-Forwarded-For`, `X-Forwarded-Host` or `Forwarded` headers, which `tailscale serve` adds. Anything that forwards raw TCP instead (`tailscale serve --tcp`, `ssh -R`, `socat`) makes everyone behind it the owner as well, so share with `tailscale serve` as above. Other users of this machine count as the owner too: reviewbuddy trusts everyone on the machine it runs on. See [docs/design/セキュリティ.md](docs/design/セキュリティ.md) and [ADR-0009](docs/adr/0009-owner-by-connection.md).
 
 ## Troubleshooting
 
