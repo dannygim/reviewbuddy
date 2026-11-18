@@ -5,6 +5,7 @@ import type {
   ErrorResponse,
   FileDiff,
   FileView,
+  IgnoredTreeResponse,
   PromptResponse,
   SessionInfo,
   Thread,
@@ -69,6 +70,11 @@ export async function fetchSession(): Promise<SessionInfo> {
 }
 
 export const fetchTree = () => request<TreeResponse>("/api/tree");
+/** The owner's ignored files: at the root, or directly in a folded `dir` ("dist/"). */
+export const fetchIgnored = (dir: string | null) =>
+  request<IgnoredTreeResponse>(
+    `/api/tree/ignored${dir === null ? "" : `?dir=${encodeURIComponent(dir)}`}`,
+  );
 export const fetchFile = (path: string) =>
   request<FileView>(`/api/file?path=${encodeURIComponent(path)}`);
 export const rawUrl = (path: string) =>

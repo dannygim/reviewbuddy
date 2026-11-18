@@ -103,13 +103,20 @@ export function ReviewPanel({
         {visible.length === 0 && <li className="muted">No threads.</li>}
         {visible.map((t) => (
           <li key={t.id} data-thread-id={t.id}>
-            <input
-              type="checkbox"
-              aria-label={`Include ${t.path} ${lineRange(t)}`}
-              checked={selected.has(t.id)}
-              onChange={() => toggle(t.id)}
-            />
-            <button className="review-item" onClick={() => openDoc(t.path)}>
+            {session.owner && (
+              <input
+                type="checkbox"
+                aria-label={`Include ${t.path} ${lineRange(t)}`}
+                checked={selected.has(t.id)}
+                onChange={() => toggle(t.id)}
+              />
+            )}
+            <button
+              className="review-item"
+              // Others cannot open ignored files.
+              disabled={t.ignored && !session.owner}
+              onClick={() => openDoc(t.path)}
+            >
               <span className="review-where">
                 {t.path}:
                 {t.startLine === t.endLine
@@ -128,27 +135,30 @@ export function ReviewPanel({
           </li>
         ))}
       </ul>
-      <footer className="review-footer">
-        {notice && <p className="muted">{notice}</p>}
-        {!reviewer.readOnly && (
-          <label>
-            <input
-              type="checkbox"
-              checked={resolveCopied}
-              onChange={(e) => setResolveCopied(e.target.checked)}
-            />{" "}
-            Resolve copied threads
-          </label>
-        )}
-        <button
-          className="primary"
-          data-action="copy-prompt"
-          disabled={busy || chosen.length === 0}
-          onClick={() => void copy()}
-        >
-          Copy prompt ({chosen.length})
-        </button>
-      </footer>
+      {/* The owner hands prompts to the coding agent (docs/adr/0009-owner-by-connection.md). */}
+      {session.owner && (
+        <footer className="review-footer">
+          {notice && <p className="muted">{notice}</p>}
+          {!reviewer.readOnly && (
+            <label>
+              <input
+                type="checkbox"
+                checked={resolveCopied}
+                onChange={(e) => setResolveCopied(e.target.checked)}
+              />{" "}
+              Resolve copied threads
+            </label>
+          )}
+          <button
+            className="primary"
+            data-action="copy-prompt"
+            disabled={busy || chosen.length === 0}
+            onClick={() => void copy()}
+          >
+            Copy prompt ({chosen.length})
+          </button>
+        </footer>
+      )}
       {manual !== null && (
         <div className="dialog-backdrop">
           <div className="dialog dialog-wide manual-copy">

@@ -102,3 +102,45 @@ describe("findReadme", () => {
     expect(readme("d/README", "d/README.rst", "d/README.markdown")).toBeNull();
   });
 });
+
+describe("buildTree with ignored entries", () => {
+  test("merges them in tree order, folded directories as directories", () => {
+    expect(
+      buildTree(
+        ["build/keep.txt", "README.md"],
+        ["build/other.txt", "dist/", ".env", "dist/pkg/", "dist/out.js"],
+      ),
+    ).toEqual([
+      {
+        name: "build",
+        path: "build",
+        children: [
+          { name: "keep.txt", path: "build/keep.txt" },
+          { name: "other.txt", path: "build/other.txt", ignored: true },
+        ],
+      },
+      {
+        name: "dist",
+        path: "dist",
+        ignored: true,
+        children: [
+          { name: "pkg", path: "dist/pkg", ignored: true, children: [] },
+          { name: "out.js", path: "dist/out.js", ignored: true },
+        ],
+      },
+      { name: ".env", path: ".env", ignored: true },
+      { name: "README.md", path: "README.md" },
+    ]);
+  });
+
+  test("shows a path in both lists once", () => {
+    expect(buildTree(["a.md"], ["a.md"])).toEqual([
+      { name: "a.md", path: "a.md", ignored: true },
+    ]);
+  });
+
+  test("findReadme skips an ignored README.md", () => {
+    const [dist] = buildTree([], ["dist/", "dist/README.md"]);
+    expect(findReadme(dist!.children!)).toBeNull();
+  });
+});

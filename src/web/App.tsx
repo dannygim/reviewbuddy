@@ -23,8 +23,9 @@ import { DisplayModeMenu } from "./DisplayModeMenu";
 import { EndSessionDialog } from "./EndSessionDialog";
 import { FileTree, type ThreadCounts } from "./FileTree";
 import { bumpFileVersion } from "./fileVersions";
-import { SidebarIcon } from "./icons";
+import { EyeIcon, SidebarIcon } from "./icons";
 import { clientId, useNickname } from "./identity";
+import { useIgnoredEntries, useIgnoredFilesShown } from "./ignoredFiles";
 import { LoginDialog } from "./LoginDialog";
 import { NicknameDialog } from "./NicknameDialog";
 import { usePaneOpen } from "./panes";
@@ -63,6 +64,11 @@ export function App() {
   const [ending, setEnding] = useState(false);
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const [treeOpen, setTreeOpen] = usePaneOpen("fileTree");
+  const [ignoredShown, setIgnoredShown] = useIgnoredFilesShown();
+  // Bumped whenever the tree is listed again, to list ignored files again too.
+  const [treeVersion, setTreeVersion] = useState(0);
+  const owner = session?.owner ?? false;
+  const ignored = useIgnoredEntries(owner && ignoredShown, treeVersion);
   const threads = useThreads();
   const participants = usePresence();
   const docPath = useDocPath();
@@ -122,6 +128,7 @@ export function App() {
       loadChanges(),
     ]);
     setFiles(tree.files);
+    setTreeVersion((v) => v + 1);
     threadStore.replaceAll(threads);
   }, [loadChanges]);
 
@@ -188,6 +195,7 @@ export function App() {
         }
         case "tree.changed":
           void fetchTree().then((tree) => setFiles(tree.files));
+          setTreeVersion((v) => v + 1);
           break;
         case "changes.changed":
           void loadChanges();
@@ -250,6 +258,7 @@ export function App() {
       nickname: nickname ?? "",
       clientId,
       readOnly: session?.readOnly ?? true,
+      owner: session?.owner ?? false,
     }),
     [nickname, session],
   );
@@ -268,6 +277,18 @@ export function App() {
           >
             <SidebarIcon />
           </button>
+          {owner && !changesOpen && (
+            <button
+              className="app-mode app-ignored"
+              data-action="ignored-files"
+              aria-label="Ignored files"
+              aria-pressed={ignoredShown}
+              title={ignoredShown ? "Hide ignored files" : "Show ignored files"}
+              onClick={() => setIgnoredShown(!ignoredShown)}
+            >
+              <EyeIcon />
+            </button>
+          )}
           <strong>reviewbuddy</strong>
           <span className="app-root" title={session?.root}>
             {error
@@ -354,6 +375,7 @@ export function App() {
                   threads={threadCounts}
                   viewers={viewers}
                   changed={changed}
+                  ignored={owner && ignoredShown ? ignored : null}
                   onSelect={openDoc}
                 />
               </div>
