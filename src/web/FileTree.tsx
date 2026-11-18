@@ -6,6 +6,7 @@ import {
   type TreeNode,
 } from "../shared/tree";
 import { CommentIcon } from "./icons";
+import type { IgnoredEntries } from "./ignoredFiles";
 import { initials } from "./presence";
 
 export type ThreadCounts = { open: number; resolved: number };
@@ -19,12 +20,30 @@ type Props = {
   viewers: Map<string, string[]>;
   /** Files that just changed on disk (highlighted briefly). */
   changed: ReadonlySet<string>;
+  /** Ignored files to merge in (the owner's, when shown), else null. */
+  ignored: IgnoredEntries | null;
   onSelect: (path: string) => void;
 };
 
 export function FileTree(props: Props) {
-  const { files, selected, threads, viewers, changed, onSelect } = props;
-  const tree = useMemo(() => buildTree(files), [files]);
+  const { files, selected, threads, viewers, changed, ignored, onSelect } =
+    props;
+  const tree = useMemo(
+    () => buildTree(files, ignored?.paths ?? []),
+    [files, ignored?.paths],
+  );
+  const foldedDirs = useMemo(() => {
+    const dirs = new Set<string>();
+    const visit = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (!node.children) continue;
+        if (node.ignored) dirs.add(node.path);
+        visit(node.children);
+      }
+    };
+    visit(tree);
+    return dirs;
+  }, [tree]);
   const dirsWithOpen = useMemo(
     () =>
       ancestorDirs(
@@ -46,6 +65,13 @@ export function FileTree(props: Props) {
     );
   }, [selected]);
 
+  // Load the open folded directories, also after they were listed again.
+  useEffect(() => {
+    for (const dir of expanded) {
+      if (foldedDirs.has(dir)) ignored?.open(`${dir}/`);
+    }
+  }, [expanded, foldedDirs, ignored]);
+
   const toggle = (path: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -64,6 +90,9 @@ export function FileTree(props: Props) {
         dirsWithOpen={dirsWithOpen}
         viewers={viewers}
         changed={changed}
+        isLoading={(dir) =>
+          foldedDirs.has(dir) && !ignored?.isLoaded(`${dir}/`)
+        }
         onToggle={toggle}
         onSelect={onSelect}
       />
@@ -80,13 +109,15 @@ type ListProps = {
   dirsWithOpen: ReadonlySet<string>;
   viewers: Map<string, string[]>;
   changed: ReadonlySet<string>;
+  /** A folded directory whose entries have not arrived yet. */
+  isLoading: (dir: string) => boolean;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
 };
 
 function TreeList(props: ListProps) {
   const { nodes, depth, expanded, selected, threads, dirsWithOpen } = props;
-  const { viewers, changed } = props;
+  const { viewers, changed, isLoading } = props;
   const { onToggle, onSelect } = props;
   const indent = { paddingLeft: `${0.5 + depth}rem` };
   return (
@@ -95,7 +126,7 @@ function TreeList(props: ListProps) {
         node.children ? (
           <li key={node.path}>
             <button
-              className="tree-dir"
+              className={node.ignored ? "tree-dir tree-ignored" : "tree-dir"}
               data-path={node.path}
               aria-expanded={expanded.has(node.path)}
               style={indent}
@@ -115,16 +146,29 @@ function TreeList(props: ListProps) {
                 <span className="tree-dot" title="Open threads inside" />
               )}
             </button>
-            {expanded.has(node.path) && (
-              <TreeList {...props} nodes={node.children} depth={depth + 1} />
-            )}
+            {expanded.has(node.path) &&
+              (isLoading(node.path) ? (
+                <p
+                  className="tree-loading muted"
+                  // Where the entries' names will start (indent and twisty).
+                  style={{ paddingLeft: `calc(${1.5 + depth}rem + 1.25em)` }}
+                >
+                  Loading…
+                </p>
+              ) : (
+                <TreeList {...props} nodes={node.children} depth={depth + 1} />
+              ))}
           </li>
         ) : (
           <li key={node.path}>
             <button
-              className={
-                changed.has(node.path) ? "tree-file tree-changed" : "tree-file"
-              }
+              className={[
+                "tree-file",
+                changed.has(node.path) && "tree-changed",
+                node.ignored && "tree-ignored",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               data-path={node.path}
               aria-current={node.path === selected ? "page" : undefined}
               style={indent}

@@ -192,7 +192,8 @@ body {
   width: 1em;
 }
 
-.app-review[aria-pressed="true"] {
+.app-review[aria-pressed="true"],
+.app-ignored[aria-pressed="true"] {
   background: var(--selected);
 }
 
@@ -266,6 +267,10 @@ body {
   font-size: 0.875rem;
   text-align: left;
   cursor: pointer;
+}
+
+.review-item:disabled {
+  cursor: default;
 }
 
 .review-item .muted {
@@ -526,6 +531,17 @@ button:disabled {
 
 .tree-file.tree-changed {
   animation: tree-changed 3s ease-out;
+}
+
+/* Ignored files (the owner's): told apart from the listed ones by color. */
+.tree .tree-ignored {
+  color: var(--muted);
+}
+
+.tree-loading {
+  margin: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.875rem;
 }
 
 @keyframes tree-changed {

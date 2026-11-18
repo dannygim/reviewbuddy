@@ -20,6 +20,8 @@ export function lineRange(thread: Pick<Thread, "startLine" | "endLine">) {
 
 export function ThreadView({ thread }: { thread: Thread }) {
   const reviewer = useReviewer();
+  // Threads on ignored files are the owner's; others only read them.
+  const canChange = !reviewer.readOnly && (reviewer.owner || !thread.ignored);
   const resolved = thread.status === "resolved";
   const [expanded, setExpanded] = useState(!resolved);
   const [replying, setReplying] = useState(false);
@@ -54,10 +56,14 @@ export function ThreadView({ thread }: { thread: Thread }) {
       {expanded && (
         <>
           {thread.comments.map((comment) => (
-            <CommentView key={comment.id} comment={comment} />
+            <CommentView
+              key={comment.id}
+              comment={comment}
+              canChange={canChange}
+            />
           ))}
           {error && <p className="composer-error">{error}</p>}
-          {!reviewer.readOnly &&
+          {canChange &&
             (replying ? (
               <Composer
                 submitLabel="Reply"
@@ -113,9 +119,15 @@ export function ThreadView({ thread }: { thread: Thread }) {
   );
 }
 
-function CommentView({ comment }: { comment: Comment }) {
+function CommentView({
+  comment,
+  canChange,
+}: {
+  comment: Comment;
+  canChange: boolean;
+}) {
   const reviewer = useReviewer();
-  const mine = comment.clientId === reviewer.clientId && !reviewer.readOnly;
+  const mine = comment.clientId === reviewer.clientId && canChange;
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
