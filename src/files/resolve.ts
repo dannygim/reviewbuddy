@@ -4,15 +4,19 @@ import type { FileIndex } from "./file-index";
 
 /**
  * Returns the real absolute path of a listed file, or null when the path is
- * not listed or resolves (e.g. through a symlink) outside the root.
+ * not listed or resolves (e.g. through a symlink) outside the root. With
+ * `ignored` (only for the owner), ignored files resolve too.
  * `root` must itself be a real path.
  */
 export function resolveFile(
   root: string,
   index: FileIndex,
   path: string,
+  options: { ignored?: boolean } = {},
 ): string | null {
-  if (!index.has(path)) return null;
+  if (!index.has(path) && !(options.ignored && index.isIgnoredFile(path))) {
+    return null;
+  }
   let real: string;
   try {
     real = realpathSync(join(root, path));
