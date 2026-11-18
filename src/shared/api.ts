@@ -26,6 +26,9 @@ export type SessionInfo = {
 
 export type TreeResponse = { files: string[] };
 
+/** Ignored files, and folded directories ending in "/", in tree order. */
+export type IgnoredTreeResponse = { paths: string[] };
+
 export type ErrorResponse = { error: string };
 
 type TextFields = {

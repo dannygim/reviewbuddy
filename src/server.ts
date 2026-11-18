@@ -22,6 +22,7 @@ import type {
   BranchesResponse,
   ChangesResponse,
   Health,
+  IgnoredTreeResponse,
   SessionInfo,
   TreeResponse,
 } from "./shared/api";
@@ -252,9 +253,11 @@ function listen(options: ServerOptions, port: number): AppServer {
     }
   };
 
+  // Ignored files only for the owner; for others they are unlisted (404).
   const fileFrom = (req: Request) => {
     const path = new URL(req.url).searchParams.get("path") ?? "";
-    return { path, abs: resolveFile(root, files, path) };
+    const ignored = isOwner(req);
+    return { path, abs: resolveFile(root, files, path, { ignored }) };
   };
 
   const server: AppServer = Bun.serve({
@@ -291,6 +294,16 @@ function listen(options: ServerOptions, port: number): AppServer {
       "/api/tree": guard(() =>
         Response.json({ files: files.paths() } satisfies TreeResponse),
       ),
+      "/api/tree/ignored": guard(async (req) => {
+        if (!isOwner(req)) {
+          return errorResponse(403, "Only the owner can see ignored files.");
+        }
+        const dir = new URL(req.url).searchParams.get("dir");
+        const paths =
+          dir === null ? await files.listIgnored() : files.listIgnoredDir(dir);
+        if (!paths) return errorResponse(404, "Directory not found");
+        return Response.json({ paths } satisfies IgnoredTreeResponse);
+      }),
       "/api/file": guard(async (req) => {
         const { path, abs } = fileFrom(req);
         if (!abs) return errorResponse(404, "File not found");
